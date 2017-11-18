@@ -28,15 +28,16 @@ void ofApp::setup(){
     // OSC set up
     sender.setup(HOST, PORT);
 
+    //軌跡が残るように
     ofSetBackgroundAuto(false);
 
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
    //debug(packet);
-    
     //ID：1のボールが動画途中でID：3になってしまうので突貫の仕様
     if(packet.ballId == 2){
         int i = 1;
@@ -47,7 +48,7 @@ void ofApp::update(){
         bp[i] = packet;
         flg[i] = detect(i);
     }
-    //1フレーム前の位置情報をバッファに格納 ・　OSC 送信
+    //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
         sendOSC(bp[i], flg[i], VecSize[i]);
     }
@@ -74,12 +75,8 @@ void ofApp::draw(){
             ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , bp[i].ballId * 300, 20);
             ofDrawBitmapString( "x = " + ofToString(x) , bp[i].ballId * 300, 40);
             ofDrawBitmapString( "y = " + ofToString(y) , bp[i].ballId * 300, 60);
-            if(flg){
-                ofDrawBitmapString( "detect " ,1000, 60);
-            }
-            
             //Ball
-           // ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , x, y);
+            ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , x, y);
             ofDrawCircle(x,y, 5);
         }
     }
@@ -91,15 +88,21 @@ void ofApp::draw(){
 }
 //--------------------------------------------------------------
 bool ofApp::detect(int _i){
+    //前のフレームの座標->現在座標のベクトルを生成
     vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
+    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
     float x = vec[_i].x * buffvec[_i].x;
     float y = vec[_i].y * buffvec[_i].y;
     bool flg = false;
     if(y < Threshold){
         flg = true;
-        VecSize[_i] = pow((vec[_i].x - buffvec[_i].x),2) + pow((vec[_i].y - buffvec[_i].y),2);
-        cout << VecSize[_i] << endl;
+        //現在ベクトルの大きさをattackとして出力
+        VecSize[_i] = pow((bp[_i].x - buffx[_i]),2) + pow((bp[_i].y - buffy[_i]),2);
+        VecSize[_i] = sqrt(VecSize[_i]);
+        VecSize[_i] = ofMap(VecSize[_i],0,1300,0,1000);
+        cout << "i = " << _i << " | attack = "<<  VecSize[_i] << endl;
     }
+    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
     buffy[_i] = bp[_i].y;
     buffvec[_i] = vec[_i];
@@ -128,7 +131,6 @@ void ofApp::sendOSC(BallPacket _bp, bool _flg, float _attack){
     }else{
         number = 1;
     }
-    
     for(int i = 0 ; i < 4 ; i++){
         //OSCメッセージの準備
         ofxOscMessage m;
