@@ -38,16 +38,21 @@ void ofApp::update(){
     //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
    //debug(packet);
-    //ID：1のボールが動画途中でID：3になってしまうので突貫の仕様
+    /*
+     ID：1のボールが動画途中でID：3になってしまうので突貫の仕様
+     Ball ID 1,3：bp[0]
+     Ball ID 2：bp[1]
+     */
+    //IDを整理
+    int number;
     if(packet.ballId == 2){
-        int i = 1;
-        bp[i] = packet;
-        flg[i] = detect(i);
+        number = 1;
     }else{
-        int i = 0;
-        bp[i] = packet;
-        flg[i] = detect(i);
+        number = 0;
     }
+    bp[number] = packet;
+    flg[number] = detect(number);
+    
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
         sendOSC(bp[i], flg[i], VecSize[i]);
@@ -65,6 +70,7 @@ void ofApp::draw(){
         //文字表示画面の背景
         ofSetColor(0, 0, 0);
         ofDrawRectangle(0, 0, ofGetWidth(),100);
+        
         for(int i = 0 ; i < 2 ; i++){
             //動画サイズ(フルHD)をWindow Sizeに変換
             float x = ofMap(bp[i].x,0,1920,0,ofGetWidth());
@@ -72,11 +78,12 @@ void ofApp::draw(){
             
             //display
             ofSetColor(255, 255, 255);
-            ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , bp[i].ballId * 300, 20);
-            ofDrawBitmapString( "x = " + ofToString(x) , bp[i].ballId * 300, 40);
-            ofDrawBitmapString( "y = " + ofToString(y) , bp[i].ballId * 300, 60);
+            ofDrawBitmapString( "Ball ID = " + ofToString(i+1) , (i+1) * 300, 20);
+            ofDrawBitmapString( "x = " + ofToString(x) , (i+1) * 300, 40);
+            ofDrawBitmapString( "y = " + ofToString(y) , (i+1) * 300, 60);
             //Ball
-            ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , x, y);
+            //ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , x, y);
+            ofSetColor((i+1)*100, 255, 255);
             ofDrawCircle(x,y, 5);
         }
     }
@@ -97,10 +104,10 @@ bool ofApp::detect(int _i){
     if(y < Threshold){
         flg = true;
         //現在ベクトルの大きさをattackとして出力
-        VecSize[_i] = pow((bp[_i].x - buffx[_i]),2) + pow((bp[_i].y - buffy[_i]),2);
-        VecSize[_i] = sqrt(VecSize[_i]);
-        VecSize[_i] = ofMap(VecSize[_i],0,1300,0,1000);
-        cout << "i = " << _i << " | attack = "<<  VecSize[_i] << endl;
+        VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
+        //VecSize[_i] = pow((bp[_i].y - buffy[_i]),2);
+        //VecSize[_i] = sqrt(VecSize[_i]);
+       // VecSize[_i] = ofMap(VecSize[_i],0,1300,0,1000);
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
@@ -124,12 +131,12 @@ void ofApp::sendOSC(BallPacket _bp, bool _flg, float _attack){
             note = 3;
         }
     }
-    //IDを整理
-    int number;
+    //IDを整理(配列とは関係ない)
+    int BallID;
     if(_bp.ballId == 2){
-        number = 2;
+        BallID = 2;
     }else{
-        number = 1;
+        BallID = 1;
     }
     for(int i = 0 ; i < 4 ; i++){
         //OSCメッセージの準備
@@ -137,24 +144,24 @@ void ofApp::sendOSC(BallPacket _bp, bool _flg, float _attack){
         string msg = "";
         switch (i) {
             case 0:
-                msg += "/Ball" + ofToString(number) + "_x";
+                msg += "/Ball" + ofToString(BallID) + "_x";
                 m.setAddress(msg);
                 m.addFloatArg(_bp.x);
                 break;
             case 1:
-                msg += "/Ball" + ofToString(number) + "_y";
+                msg += "/Ball" + ofToString(BallID) + "_y";
                 m.setAddress(msg);
                 m.addFloatArg(_bp.y);
                 break;
             case 2:
-                msg += "/Ball" + ofToString(number) + "_attack";
+                msg += "/Ball" + ofToString(BallID) + "_attack";
                 m.setAddress(msg);
                 m.addFloatArg(attack);
                 break;
             case 3:
-                msg += "/Ball" + ofToString(number) + "_note";
+                msg += "/Ball" + ofToString(BallID) + "_note";
                 m.setAddress(msg);
-                m.addIntArg(note*2);
+                m.addIntArg(note*BallID);
                 break;
             default:
                 break;
