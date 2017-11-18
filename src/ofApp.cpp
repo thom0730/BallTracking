@@ -82,7 +82,7 @@ void ofApp::draw(){
             ofDrawBitmapString( "x = " + ofToString(x) , (i+1) * 300, 40);
             ofDrawBitmapString( "y = " + ofToString(y) , (i+1) * 300, 60);
             //Ball
-            //ofDrawBitmapString( "Ball ID = " + ofToString(bp[i].ballId) , x, y);
+            ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , (i+1) * 300, 80);
             ofSetColor((i+1)*100, 255, 255);
             ofDrawCircle(x,y, 5);
         }
@@ -105,6 +105,10 @@ bool ofApp::detect(int _i){
         flg = true;
         //現在ベクトルの大きさをattackとして出力
         VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
+        //ボールが消えた時のattackを0に
+        if(VecSize[_i] > 400 ){
+            VecSize[_i]  = 0;
+        }
         //VecSize[_i] = pow((bp[_i].y - buffy[_i]),2);
         //VecSize[_i] = sqrt(VecSize[_i]);
        // VecSize[_i] = ofMap(VecSize[_i],0,1300,0,1000);
