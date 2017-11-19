@@ -22,7 +22,7 @@ void ofApp::setup(){
     
     //ボールのバウンド検出用のフラグの初期化
     for(int i = 0 ; i < BALL_NUM; i++){
-        flg[i] = false;
+        bouFlg[i] = false;
     }
     
     // OSC set up
@@ -51,11 +51,11 @@ void ofApp::update(){
         number = 0;
     }
     bp[number] = packet;
-    flg[number] = detect(number);
+    bouFlg[number] = detect(number);
     
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
-        sendOSC(bp[i], flg[i], VecSize[i]);
+        sendOSC(bp[i], bouFlg[i], i);
     }
 }
 
@@ -83,6 +83,7 @@ void ofApp::draw(){
             ofDrawBitmapString( "y = " + ofToString(y) , (i+1) * 300, 60);
             //Ball
             ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , (i+1) * 300, 80);
+            ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1) * 300, 100);
             ofSetColor((i+1)*100, 255, 255);
             ofDrawCircle(x,y, 5);
         }
@@ -100,41 +101,46 @@ bool ofApp::detect(int _i){
     //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
     float x = vec[_i].x * buffvec[_i].x;
     float y = vec[_i].y * buffvec[_i].y;
-    bool flg = false;
+    bool _flg = false;
+    
+    VecSize[_i] = 0;
+    note[_i] = 0;
+    
     if(y < Threshold){
-        flg = true;
+        _flg = true;
         //現在ベクトルの大きさをattackとして出力
         VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
         //ボールが消えた時のattackを0に
         if(VecSize[_i] > 400 ){
             VecSize[_i]  = 0;
         }
-        //VecSize[_i] = pow((bp[_i].y - buffy[_i]),2);
-        //VecSize[_i] = sqrt(VecSize[_i]);
-       // VecSize[_i] = ofMap(VecSize[_i],0,1300,0,1000);
+        //音色分け
+        if(bp[_i].y < ofGetHeight()/3){
+            note[_i] = 1;
+        }else if(bp[_i].y > ofGetHeight()/3 &&  bp[_i].y < 2*ofGetHeight()/3){
+            note[_i] = 2;
+        }else{
+            note[_i] = 3;
+        }
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
     buffy[_i] = bp[_i].y;
     buffvec[_i] = vec[_i];
     
-    return flg;
+    return _flg;
 }
 //--------------------------------------------------------------
-void ofApp::sendOSC(BallPacket _bp, bool _flg, float _attack){
-    float attack = 0;
-    int note = 0;
+void ofApp::sendOSC(BallPacket _bp, bool _flg, int _i){
+    
+    float _attack = 0;
+    int _note = 0;
     //ボールのバウンドが検出
     if(_flg){
-        attack = _attack;
-        if(_bp.y < ofGetHeight()/3){
-            note = 1;
-        }else if(_bp.y > ofGetHeight()/3 &&  _bp.y < 2*ofGetHeight()/3){
-            note = 2;
-        }else{
-            note = 3;
-        }
+        _attack = VecSize[_i];
+        _note = note[_i];
     }
+    
     //IDを整理(配列とは関係ない)
     int BallID;
     if(_bp.ballId == 2){
@@ -160,15 +166,19 @@ void ofApp::sendOSC(BallPacket _bp, bool _flg, float _attack){
             case 2:
                 msg += "/Ball" + ofToString(BallID) + "_attack";
                 m.setAddress(msg);
-                m.addFloatArg(attack);
+                m.addFloatArg(_attack);
                 break;
             case 3:
                 msg += "/Ball" + ofToString(BallID) + "_note";
                 m.setAddress(msg);
-                m.addIntArg(note*BallID);
+                m.addIntArg(_note*BallID);
                 break;
             default:
                 break;
+        }
+        if( _note != 0 || _attack != 0){
+            cout << "attack = " << _attack << endl;
+            cout << "note = " << _note << endl;
         }
         sender.sendMessage(m);
     }
