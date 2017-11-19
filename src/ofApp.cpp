@@ -40,7 +40,7 @@ void ofApp::update(){
      */
     //IDを整理
     int number;
-    if(packet.ballId == 2){
+    if(packet.ballId % 2 == 0){
         number = 1;
     }else{
         number = 0;
@@ -119,7 +119,7 @@ void ofApp::detect(int _i){
 void ofApp::sendOSC(BallPacket _bp, int _i){
     //IDを整理(配列とは関係ない)
     int BallID;
-    if(_bp.ballId == 2){
+    if(_bp.ballId % 2 == 0){
         BallID = 2;
     }else{
         BallID = 1;
