@@ -41,9 +41,10 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
     
     void debug(BallPacket _bp);
-    void sendOSC(BallPacket _bp, bool _flg, int _i);
-    bool detect(int _i);
+    void sendOSC(BallPacket _bp, int _i);
+    void detect(int _i);
     void drawGrid();
+    void soundCreate(int _i);
 
     ofxUDPManager udpConnect;
     float mx,my;
@@ -53,7 +54,6 @@ class ofApp : public ofBaseApp{
     float buffx[BALL_NUM], buffy[BALL_NUM]; //1フレーム前の位置
     ofVec3f vec[BALL_NUM];//現在のベクトル
     ofVec3f buffvec[BALL_NUM]; //1フレーム前のベクトル
-    bool bouFlg[BALL_NUM] ; //ボールのバウンドの検出判定用
     float VecSize[BALL_NUM]; //Attackデータ
     int note[BALL_NUM]; // 音色データ
     

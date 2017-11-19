@@ -20,11 +20,6 @@ void ofApp::setup(){
     gui.setup();
     gui.add(Threshold.setup("Threshold", -1, -5, 0));
     
-    //ボールのバウンド検出用のフラグの初期化
-    for(int i = 0 ; i < BALL_NUM; i++){
-        bouFlg[i] = false;
-    }
-    
     // OSC set up
     sender.setup(HOST, PORT);
 
@@ -51,11 +46,12 @@ void ofApp::update(){
         number = 0;
     }
     bp[number] = packet;
-    bouFlg[number] = detect(number);
-    
+    detect(number);
+
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
-        sendOSC(bp[i], bouFlg[i], i);
+        soundCreate(i);
+        sendOSC(bp[i], i);
     }
 }
 
@@ -95,52 +91,32 @@ void ofApp::draw(){
 
 }
 //--------------------------------------------------------------
-bool ofApp::detect(int _i){
+void ofApp::detect(int _i){
     //前のフレームの座標->現在座標のベクトルを生成
     vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
     //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
     float x = vec[_i].x * buffvec[_i].x;
     float y = vec[_i].y * buffvec[_i].y;
-    bool _flg = false;
     
     VecSize[_i] = 0;
     note[_i] = 0;
     
     if(y < Threshold){
-        _flg = true;
         //現在ベクトルの大きさをattackとして出力
         VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
-        //ボールが消えた時のattackを0に
+        
+        //ボールが消えた時のattackの検出を外す
         if(VecSize[_i] > 400 ){
             VecSize[_i]  = 0;
-        }
-        //音色分け
-        if(bp[_i].y < ofGetHeight()/3){
-            note[_i] = 1;
-        }else if(bp[_i].y > ofGetHeight()/3 &&  bp[_i].y < 2*ofGetHeight()/3){
-            note[_i] = 2;
-        }else{
-            note[_i] = 3;
         }
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
     buffy[_i] = bp[_i].y;
     buffvec[_i] = vec[_i];
-    
-    return _flg;
 }
 //--------------------------------------------------------------
-void ofApp::sendOSC(BallPacket _bp, bool _flg, int _i){
-    
-    float _attack = 0;
-    int _note = 0;
-    //ボールのバウンドが検出
-    if(_flg){
-        _attack = VecSize[_i];
-        _note = note[_i];
-    }
-    
+void ofApp::sendOSC(BallPacket _bp, int _i){
     //IDを整理(配列とは関係ない)
     int BallID;
     if(_bp.ballId == 2){
@@ -166,19 +142,15 @@ void ofApp::sendOSC(BallPacket _bp, bool _flg, int _i){
             case 2:
                 msg += "/Ball" + ofToString(BallID) + "_attack";
                 m.setAddress(msg);
-                m.addFloatArg(_attack);
+                m.addFloatArg(VecSize[_i]);
                 break;
             case 3:
                 msg += "/Ball" + ofToString(BallID) + "_note";
                 m.setAddress(msg);
-                m.addIntArg(_note*BallID);
+                m.addIntArg(note[_i]);
                 break;
             default:
                 break;
-        }
-        if( _note != 0 || _attack != 0){
-            cout << "attack = " << _attack << endl;
-            cout << "note = " << _note << endl;
         }
         sender.sendMessage(m);
     }
@@ -215,6 +187,18 @@ void ofApp::debug(BallPacket _bp){
     cout <<  "timestamp = " << _bp.timestamp << endl;
     cout <<  "x = " << _bp.x << endl;
     cout <<  "y = " << _bp.y << endl;
+}
+//--------------------------------------------------------------
+void ofApp::soundCreate(int _i){
+    //音色分け
+    if(bp[_i].y < ofGetHeight()/3){
+        note[_i] = 1 * (_i+1);
+    }else if(bp[_i].y > ofGetHeight()/3 &&  bp[_i].y < 2*ofGetHeight()/3){
+        note[_i] = 2 * (_i+1);
+    }else{
+        note[_i] = 3 * (_i+1);
+    }
+    
 }
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
