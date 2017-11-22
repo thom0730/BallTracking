@@ -6,9 +6,9 @@
 #include "ofxGui.h"
 
 #define BALL_NUM 2
-
+#define SAMPLE_RATE 10
 #define HOST "127.0.0.1" // 受信側のIPアドレス
-#define PORT 8000 // 受信側のポート番号
+#define PORT 8000 // 受信側のポート番
 
     
 struct BallPacket{
@@ -44,8 +44,18 @@ class ofApp : public ofBaseApp{
     void sendOSC(BallPacket _bp, int _i);
     void detect(int _i);
     void drawGrid();
-    void soundCreate(int _i);
+    void mainSoundCreate(int _i);
+    void introSoundCreate();
 
+    int fullHD_x = 1920;
+    int fullHD_y = 1080;
+    float BPM = 100.0;
+    bool introFlg = false;
+    bool mainFlg = false;
+    
+    int startTime;
+    int introTime;
+    
     ofxUDPManager udpConnect;
     float mx,my;
     bool isBind = true;

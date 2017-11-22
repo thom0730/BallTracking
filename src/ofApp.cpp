@@ -25,7 +25,14 @@ void ofApp::setup(){
 
     //軌跡が残るように
     ofSetBackgroundAuto(false);
-
+    
+    //BPMを秒に直す
+    BPM = (60/BPM)*4*10;
+    
+    //初期のNoteを定義
+    for(int i = 0  ; i < BALL_NUM ; i++){
+        note[i] = i+1;
+    }
 }
 
 //--------------------------------------------------------------
@@ -33,24 +40,36 @@ void ofApp::update(){
     //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
    //debug(packet);
+
     /*
-     ID：1のボールが動画途中でID：3になってしまうので突貫の仕様
-     Ball ID 1,3：bp[0]
-     Ball ID 2：bp[1]
+     Ball ID 画面左：bp[0] BALL1
+     Ball ID 画面右：bp[1] BALL2
      */
-    //IDを整理
-    int number;
-    if(packet.ballId % 2 == 0){
-        number = 1;
-    }else{
-        number = 0;
-    }
+     //IDを整理
+     int number;
+     if(packet.x < fullHD_x/2){
+         number = 0;
+     }else{
+         number = 1;
+     }
+
+    //配列に受信した構造体を格納
     bp[number] = packet;
+    //衝突検出
     detect(number);
+    
+    //音の処理のタイムライン
+    if(introFlg){
+        introSoundCreate();
+    }
+    if(mainFlg){
+        for(int i = 0  ; i < BALL_NUM ; i++){
+             mainSoundCreate(i);
+        }
+    }
 
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
-        soundCreate(i);
         sendOSC(bp[i], i);
     }
 }
@@ -69,8 +88,8 @@ void ofApp::draw(){
         
         for(int i = 0 ; i < 2 ; i++){
             //動画サイズ(フルHD)をWindow Sizeに変換
-            float x = ofMap(bp[i].x,0,1920,0,ofGetWidth());
-            float y = ofMap(bp[i].y,0,1080,0,ofGetHeight());
+            float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
+            float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
             
             //display
             ofSetColor(255, 255, 255);
@@ -83,6 +102,12 @@ void ofApp::draw(){
             ofSetColor((i+1)*100, 255, 255);
             ofDrawCircle(x,y, 5);
         }
+    }
+    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
+    if(introFlg){
+        ofDrawBitmapString("Introduction" , ofGetWidth() - 300, 20);
+    }else if(mainFlg){
+        ofDrawBitmapString("Main Performance" , ofGetWidth() - 300, 20);
     }
     //方眼紙
     drawGrid();
@@ -99,7 +124,6 @@ void ofApp::detect(int _i){
     float y = vec[_i].y * buffvec[_i].y;
     
     VecSize[_i] = 0;
-    note[_i] = 0;
     
     if(y < Threshold){
         //現在ベクトルの大きさをattackとして出力
@@ -119,10 +143,10 @@ void ofApp::detect(int _i){
 void ofApp::sendOSC(BallPacket _bp, int _i){
     //IDを整理(配列とは関係ない)
     int BallID;
-    if(_bp.ballId % 2 == 0){
-        BallID = 2;
-    }else{
+    if(_bp.x < fullHD_x/2){
         BallID = 1;
+    }else{
+        BallID = 2;
     }
     for(int i = 0 ; i < 4 ; i++){
         //OSCメッセージの準備
@@ -145,7 +169,11 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
                 m.addFloatArg(VecSize[_i]);
                 break;
             case 3:
-                msg += "/Ball" + ofToString(BallID) + "_note";
+                if(introFlg || mainFlg){
+                    msg += "/Ball" + ofToString(BallID) + "_note";
+                }else{
+                     msg += "/Ball" + ofToString(BallID) + "_intro_note";
+                }
                 m.setAddress(msg);
                 m.addIntArg(note[_i]);
                 break;
@@ -189,7 +217,7 @@ void ofApp::debug(BallPacket _bp){
     cout <<  "y = " << _bp.y << endl;
 }
 //--------------------------------------------------------------
-void ofApp::soundCreate(int _i){
+void ofApp::mainSoundCreate(int _i){
     //音色分け
     if(bp[_i].y < ofGetHeight()/3){
         note[_i] = 1 * (_i+1);
@@ -201,8 +229,36 @@ void ofApp::soundCreate(int _i){
     
 }
 //--------------------------------------------------------------
-void ofApp::keyPressed(int key){
-
+void ofApp::introSoundCreate(){
+    introTime = (ofGetElapsedTimeMillis()-startTime)/100;
+    int n = (introTime/int(BPM))+1; //小節数(1~10)
+    switch (n) {
+        case 1:
+            note[0] = 1;
+            break;
+        case 2:
+            note[1] = 2;
+            break;
+        case 4:
+            note[0] = 3;
+            break;
+        case 6:
+            note[1] = 4;
+            break;
+        case 11:
+            introFlg = false;
+            mainFlg = true;
+            break;
+        default:
+            break;
+    }
+}
+//--------------------------------------------------------------
+void ofApp::keyPressed(int key){ //本当はOSCで1を受けたタイミング
+    if(key == 's'){
+        introFlg = true;
+        startTime = ofGetElapsedTimeMillis();
+    }
 }
 
 //--------------------------------------------------------------
