@@ -1,5 +1,6 @@
 #include "ofApp.h"
 
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     //ofSetWindowShape(400, 400);
@@ -37,35 +38,51 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    countFrame++;
     //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-   //debug(packet);
+  // debug(packet);
 
-    /*
-     Ball ID 画面左：bp[0] BALL1
-     Ball ID 画面右：bp[1] BALL2
-     */
+    /*============================
+     画面右：bp[0] BALL1 (RIGHT = 1)
+     画面左：bp[1] BALL2 (LEFT = 2)
+     ============================*/
+
      //IDを整理
-     int number;
+     int number = 0;
      if(packet.x < fullHD_x/2){
-         number = 0;
+         number = LEFT-1;
      }else{
-         number = 1;
+         number = RIGHT-1;
      }
-
+    //(0,0)を受信した時のIDの振り分け
+    if(packet.ballId == 0){
+        switch(buffArrID){
+            case 0:
+                number = 1;
+                break;
+            case 1:
+                number = 0;
+                break;
+        }
+    }
+    buffArrID = number; //前フレームに受けたボールのID
+    
     //配列に受信した構造体を格納
     bp[number] = packet;
     //衝突検出
     detect(number);
     
     //音の処理のタイムライン
+    startIntro();
     if(introFlg){
-        introSoundCreate();
+        startCount();
     }
     if(mainFlg){
         for(int i = 0  ; i < BALL_NUM ; i++){
              mainSoundCreate(i);
         }
+        cout <<"main"<< endl;
     }
 
     //OSC 送信
@@ -81,31 +98,60 @@ void ofApp::draw(){
     ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
     
     ofSetColor(255, 255, 255);
-    if(packet.flag == 1){
-        //文字表示画面の背景
-        ofSetColor(0, 0, 0);
-        ofDrawRectangle(0, 0, ofGetWidth(),100);
+    //文字表示画面の背景
+    ofSetColor(0, 0, 0);
+    ofDrawRectangle(0, 0, ofGetWidth(),100);
+    
+    for(int i = 0 ; i < 2 ; i++){
+        //動画サイズ(フルHD)をWindow Sizeに変換
+        float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
+        float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
         
-        for(int i = 0 ; i < 2 ; i++){
-            //動画サイズ(フルHD)をWindow Sizeに変換
-            float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
-            float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
-            
+        if(x < ofGetWidth()/2){
+            //(0,0)を受信した時のIDの振り分け
+            int number;
+            if(packet.ballId == 0){
+                if(buffArrID == (LEFT-1)){
+                    //display
+                    ofSetColor(255, 255, 255);
+                    ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , 2*300, 20);
+                    ofDrawBitmapString( "x = " + ofToString(x) , 2*300, 40);
+                    ofDrawBitmapString( "y = " + ofToString(y) , 2*300, 60);
+                    ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 2*300, 80);
+                    ofDrawBitmapString( "note = " + ofToString(note[i]) , 2*300, 100);
+                }
+            }else{
+                //display
+                ofSetColor(255, 255, 255);
+                ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , 300, 20);
+                ofDrawBitmapString( "x = " + ofToString(x) , 300, 40);
+                ofDrawBitmapString( "y = " + ofToString(y) , 300, 60);
+                ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 300, 80);
+                ofDrawBitmapString( "note = " + ofToString(note[i]) , 300, 100);
+            }
+        }else{
             //display
             ofSetColor(255, 255, 255);
-            ofDrawBitmapString( "Ball ID = " + ofToString(i+1) , (i+1) * 300, 20);
-            ofDrawBitmapString( "x = " + ofToString(x) , (i+1) * 300, 40);
-            ofDrawBitmapString( "y = " + ofToString(y) , (i+1) * 300, 60);
-            //Ball
-            ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , (i+1) * 300, 80);
-            ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1) * 300, 100);
-            ofSetColor((i+1)*100, 255, 255);
-            ofDrawCircle(x,y, 5);
+            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , 2*300, 20);
+            ofDrawBitmapString( "x = " + ofToString(x) , 2*300, 40);
+            ofDrawBitmapString( "y = " + ofToString(y) , 2*300, 60);
+            ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 2*300, 80);
+            ofDrawBitmapString( "note = " + ofToString(note[i]) , 2*300, 100);
         }
+        //ball
+        ofSetColor(i*100 + ofMap(VecSize[i],0,1500,0,255), 255, 255);
+        ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
+        ofDrawCircle(x,y, 5);
     }
+
+    
+    
     ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
     if(introFlg){
         ofDrawBitmapString("Introduction" , ofGetWidth() - 300, 20);
+        if(!introCue){
+            ofDrawBitmapString("measure："+ofToString(measure_num), ofGetWidth() - 300, 40);
+        }
     }else if(mainFlg){
         ofDrawBitmapString("Main Performance" , ofGetWidth() - 300, 20);
     }
@@ -144,9 +190,9 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
     //IDを整理(配列とは関係ない)
     int BallID;
     if(_bp.x < fullHD_x/2){
-        BallID = 1;
+        BallID = LEFT;
     }else{
-        BallID = 2;
+        BallID = RIGHT;
     }
     for(int i = 0 ; i < 4 ; i++){
         //OSCメッセージの準備
@@ -231,8 +277,9 @@ void ofApp::mainSoundCreate(int _i){
 //--------------------------------------------------------------
 void ofApp::introSoundCreate(){
     introTime = (ofGetElapsedTimeMillis()-startTime)/100;
-    int n = (introTime/int(BPM))+1; //小節数(1~10)
-    switch (n) {
+    measure_num = (introTime/int(BPM))+1; //小節数(1~10)
+    cout << measure_num << endl;
+    switch (measure_num) {
         case 1:
             note[0] = 1;
             break;
@@ -256,11 +303,28 @@ void ofApp::introSoundCreate(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){ //本当はOSCで1を受けたタイミング
     if(key == 's'){
-        introFlg = true;
         startTime = ofGetElapsedTimeMillis();
+        introCue = false;
     }
 }
-
+//--------------------------------------------------------------
+void ofApp::startIntro(){
+        if(countFrame > 600 && !mainFlg){
+            if(bp[LEFT-1].x == 0.0){
+                introFlg = true;
+            }
+        }
+}
+//--------------------------------------------------------------
+void ofApp::startCount(){
+    if(VecSize[0] < Threshold && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue => introduction：カウント開始
+        startTime = ofGetElapsedTimeMillis();
+        introCue = false;
+    }
+    if(!introCue){
+        introSoundCreate();
+    }
+}
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
 

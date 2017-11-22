@@ -10,6 +10,10 @@
 #define HOST "127.0.0.1" // 受信側のIPアドレス
 #define PORT 8000 // 受信側のポート番
 
+//ボール番号の割り振り
+#define RIGHT 1
+#define LEFT 2
+
     
 struct BallPacket{
     uint32_t header;
@@ -46,15 +50,21 @@ class ofApp : public ofBaseApp{
     void drawGrid();
     void mainSoundCreate(int _i);
     void introSoundCreate();
+    void startIntro();
+    void startCount();
 
     int fullHD_x = 1920;
     int fullHD_y = 1080;
     float BPM = 100.0;
+    bool introCue = true;
     bool introFlg = false;
     bool mainFlg = false;
     
+    int buffArrID;
     int startTime;
     int introTime;
+    int countFrame = 0; //ビルド開始からのフレームをカウント
+    int measure_num = 0; //introductionの小節数のカウント
     
     ofxUDPManager udpConnect;
     float mx,my;
