@@ -159,31 +159,37 @@ void ofApp::draw(){
     drawGrid();
     // GUIを表示
     gui.draw();
+    
 
 }
 //--------------------------------------------------------------
 void ofApp::detect(int _i){
-    //前のフレームの座標->現在座標のベクトルを生成
-    vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
-    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
-    float x = vec[_i].x * buffvec[_i].x;
-    float y = vec[_i].y * buffvec[_i].y;
-    
     VecSize[_i] = 0;
     
-    if(y < Threshold){
-        //現在ベクトルの大きさをattackとして出力
-        VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
+    if(countFrame%SAMPLE_RATE == 0){
+        //前のフレームの座標->現在座標のベクトルを生成
+        vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
+        //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
+        float producXx = vec[_i].x * buffvec[_i].x;
+        float productY = vec[_i].y * buffvec[_i].y;
         
-        //ボールが消えた時のattackの検出を外す
-        if(VecSize[_i] > 400 ){
-            VecSize[_i]  = 0;
+        if(vec[_i].dot(buffvec[_i])<0 && buffvec[_i].y < 0){
+      //  if(productY < Threshold && buffvec[_i].y < 0){
+            //現在ベクトルの大きさをattackとして出力
+            VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
+            cout <<  VecSize[_i] << endl;
+            
+            //ボールが消えた時のattackの検出を外す
+            if(VecSize[_i] > 400 ){
+                VecSize[_i]  = 0;
+            }
         }
+        //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
+        buffx[_i] = bp[_i].x;
+        buffy[_i] = bp[_i].y;
+        buffvec[_i] = vec[_i];
     }
-    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
-    buffx[_i] = bp[_i].x;
-    buffy[_i] = bp[_i].y;
-    buffvec[_i] = vec[_i];
+    
 }
 //--------------------------------------------------------------
 void ofApp::sendOSC(BallPacket _bp, int _i){
@@ -317,7 +323,7 @@ void ofApp::startIntro(){
 }
 //--------------------------------------------------------------
 void ofApp::startCount(){
-    if(VecSize[0] < Threshold && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
+    if(VecSize[0] != 0 && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
         startTime = ofGetElapsedTimeMillis();
         introCue = false;
     }

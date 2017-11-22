@@ -6,7 +6,7 @@
 #include "ofxGui.h"
 
 #define BALL_NUM 2
-#define SAMPLE_RATE 10
+#define SAMPLE_RATE 5
 #define HOST "127.0.0.1" // 受信側のIPアドレス
 #define PORT 8000 // 受信側のポート番
 
