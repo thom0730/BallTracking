@@ -317,7 +317,7 @@ void ofApp::startIntro(){
 }
 //--------------------------------------------------------------
 void ofApp::startCount(){
-    if(VecSize[0] < Threshold && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue => introduction：カウント開始
+    if(VecSize[0] < Threshold && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
         startTime = ofGetElapsedTimeMillis();
         introCue = false;
     }
