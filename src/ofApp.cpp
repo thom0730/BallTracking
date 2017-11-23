@@ -82,7 +82,6 @@ void ofApp::update(){
         for(int i = 0  ; i < BALL_NUM ; i++){
              mainSoundCreate(i);
         }
-        cout <<"main"<< endl;
     }
 
     //OSC 送信
@@ -177,7 +176,6 @@ void ofApp::detect(int _i){
       //  if(productY < Threshold && buffvec[_i].y < 0){
             //現在ベクトルの大きさをattackとして出力
             VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
-            cout <<  VecSize[_i] << endl;
             
             //ボールが消えた時のattackの検出を外す
             if(VecSize[_i] > 400 ){
@@ -284,7 +282,6 @@ void ofApp::mainSoundCreate(int _i){
 void ofApp::introSoundCreate(){
     introTime = (ofGetElapsedTimeMillis()-startTime)/100;
     measure_num = (introTime/int(BPM))+1; //小節数(1~10)
-    cout << measure_num << endl;
     switch (measure_num) {
         case 1:
             note[0] = 1;
