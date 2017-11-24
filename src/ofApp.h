@@ -4,6 +4,7 @@
 #include "ofxNetwork.h"
 #include "ofxOsc.h"
 #include "ofxGui.h"
+#include "drawData.hpp"
 
 #define BALL_NUM 2
 #define SAMPLE_RATE 5
@@ -11,8 +12,8 @@
 #define PORT 8000 // 受信側のポート番
 
 //ボール番号の割り振り
-#define RIGHT 1
-#define LEFT 2
+#define LEFT 1
+#define RIGHT 2
 
 struct BallPacket{
     uint32_t header;
@@ -44,33 +45,26 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
     
     void debug(BallPacket _bp);
+    void trackingDraw();
+    void graphDraw();
     void sendOSC(BallPacket _bp, int _i);
     void detect(int _i);
     void detect2(int _i);
-    void drawGrid();
     void mainSoundCreate(int _i);
-    void introSoundCreate();
-    void startIntro();
-    void startCount();
     void lowpassFilter(float _posPrev, float _posNew);
     float alpha = 0.8;
+
 
     int fullHD_x = 1920;
     int fullHD_y = 1080;
     float BPM = 100.0;
-    bool introCue = true;
-    bool introFlg = false;
-    bool mainFlg = false;
-    
-    int buffArrID;
-    int startTime;
-    int introTime;
-    int countFrame = 0; //ビルド開始からのフレームをカウント
-    int measure_num = 0; //introductionの小節数のカウント
-    
+    int buffArrID; //ボールが消えたときのIDの整理用
+    int countFrame;
+
     ofxUDPManager udpConnect;
     float mx,my;
     bool isBind = true;
+    
     BallPacket packet; //受信用
     BallPacket bp[BALL_NUM];
     float buffx[BALL_NUM], buffy[BALL_NUM]; //1フレーム前の位置
@@ -84,4 +78,6 @@ class ofApp : public ofBaseApp{
     ofxFloatSlider Threshold;
     //OSCメッセージの送信者
     ofxOscSender sender;
+    
+    drawData drawdata;
 };

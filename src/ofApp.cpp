@@ -8,6 +8,7 @@ void ofApp::setup(){
     ofSetVerticalSync(true);
     ofSetFrameRate(60);
     ofEnableAlphaBlending();
+    ofSetPolyMode(OF_POLY_WINDING_NONZERO); // this is the normal mode
     
     //UDP set up
     if (isBind) { // Bind済みかどうかのbool
@@ -41,11 +42,11 @@ void ofApp::update(){
     countFrame++;
     //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-  // debug(packet);
+   //debug(packet);
 
     /*============================
-     画面右：bp[0] BALL1 (RIGHT = 1)
-     画面左：bp[1] BALL2 (LEFT = 2)
+     画面左：bp[0] BALL1 (LEFT = 1)
+     画面右：bp[1] BALL2 (RIGHT = 2)
      ============================*/
 
      //IDを整理
@@ -67,23 +68,16 @@ void ofApp::update(){
         }
     }
     buffArrID = number; //前フレームに受けたボールのID
+    
+    
     //配列に受信した構造体を格納
     bp[number] = packet;
-    //衝突検出
+    //衝突検出(attackの検出)
     detect2(number);
     
-    //音の処理のタイムライン
-   // startIntro();
-    if(introFlg){
-        startCount();
-    }
-    if(mainFlg){
-        for(int i = 0  ; i < BALL_NUM ; i++){
-             mainSoundCreate(i);
-        }
-    }
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
+        mainSoundCreate(i);
         sendOSC(bp[i], i);
     }
 }
@@ -92,62 +86,13 @@ void ofApp::update(){
 void ofApp::draw(){
     // 画面をフェード
     ofSetColor(0, 0, 0, 5);
-    ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
-    
-    ofSetColor(255, 255, 255);
-    //文字表示画面の背景
-    ofSetColor(0, 0, 0);
-    ofDrawRectangle(0, 0, ofGetWidth(),100);
-    
-    for(int i = 0 ; i < BALL_NUM ; i++){
-        ofSetColor(255, 255, 255);
-        //動画サイズ(フルHD)をWindow Sizeに変換
-        float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
-        float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
-        
-        int j;
-        if(i == 0){ //RIGHT
-            j = 1;
-            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , (j+1)*300, 20);
-        }else{ //LEFT
-            j = 0 ;
-            ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , (j+1)*300, 20);
-        }
-        ofDrawBitmapString( "x = " + ofToString(x) , (j+1)*300, 40);
-        ofDrawBitmapString( "y = " + ofToString(y) , (j+1)*300, 60);
-        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (j+1)*300, 80);
-        ofDrawBitmapString( "note = " + ofToString(note[i]) , (j+1)*300, 100);
+  //  ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
 
-        //ball
-        ofSetColor(i*100 + ofMap(attack[i],0,1500,0,255), 255, 255);
-        ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
-        ofDrawCircle(x,y, 5);
-        
-        /*
-        //速度ベクトル
-        float buffX = ofMap(buffx[i],0,fullHD_x,0,ofGetWidth());
-        float buffY = ofMap(buffy[i],0,fullHD_y,0,ofGetHeight());
-        ofSetColor(255, 0, 0);
-        ofDrawLine(x, y, buffX, buffY); //現在ベクトル
-        float vecX = -1 * ofMap(vec[i].x,0,fullHD_x,0,ofGetWidth());
-        float vecY = -1 * ofMap(vec[i].y,0,fullHD_y,0,ofGetHeight());
-        ofSetColor(0, 255, 0);
-        ofDrawLine(buffX, buffY, buffX+vecX, buffY+vecY); //バッファベクトル
-         */
-    }
+   // trackingDraw();
+    graphDraw();
 
-    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
-    if(introFlg){
-        ofDrawBitmapString("Introduction" , ofGetWidth() - 300, 20);
-        if(!introCue){
-            ofDrawBitmapString("measure："+ofToString(measure_num), ofGetWidth() - 300, 40);
-        }
-    }else if(mainFlg){
-        ofDrawBitmapString("Main Performance" , ofGetWidth() - 300, 20);
-    }
-  
     //方眼紙
-    drawGrid();
+    drawdata.drawGrid();
     // GUIを表示
     gui.draw();
     
@@ -161,17 +106,16 @@ void ofApp::detect(int _i){
         //ローパスフィルタ
         lowpassFilter(buffx[_i],bp[_i].x);
         lowpassFilter(buffy[_i],bp[_i].y);
-        //前のフレームの座標->現在座標のベクトルを生成
         lowpassFilter(buffx[_i],bp[_i].x);
         lowpassFilter(buffy[_i],bp[_i].y);
+        //前のフレームの座標->現在座標のベクトルを生成
         vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
-       // cout <<vec[_i].dot(buffvec[_i]) << endl;
+
         //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
         if(vec[_i].dot(buffvec[_i])<0 && vec[_i].y > 0){
 
             //現在ベクトルの大きさをattackとして出力
             attack[_i] = ABS(bp[_i].y - buffy[_i]);
-            cout << "attack = " << attack[_i] << endl;
             //ボールが消えた時のattackの検出を外す
             if(attack[_i] > 400 ){
                 attack[_i]  = 0;
@@ -186,7 +130,10 @@ void ofApp::detect(int _i){
 }
 //--------------------------------------------------------------
 void ofApp::detect2(int _i){
-    //前のフレームの座標->現在座標のベクトルを生成
+    //ローパスフィルタ
+    lowpassFilter(buffx[_i],bp[_i].x);
+    lowpassFilter(buffy[_i],bp[_i].y);
+    //前のフレームの座標->現在座標の速度ベクトルを生成
     vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
     //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
     float x = vec[_i].x * buffvec[_i].x;
@@ -194,13 +141,15 @@ void ofApp::detect2(int _i){
     
     attack[_i] = 0;
     
-    if(y < Threshold){
+    if(y < Threshold && vec[_i].y < 0){
         //現在ベクトルの大きさをattackとして出力
         attack[_i] = ABS(bp[_i].y - buffy[_i]);
         
         //ボールが消えた時のattackの検出を外す
         if(attack[_i] > 400 ){
             attack[_i]  = 0;
+        }else if(attack[_i] > 1.0 && attack[_i] < 10.0){
+           // attack[_i] = 10.0;
         }
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
@@ -238,11 +187,7 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
                 m.addFloatArg(attack[_i]);
                 break;
             case 3:
-                if(introFlg || mainFlg){
-                    msg += "/Ball" + ofToString(BallID) + "_note";
-                }else{
-                     msg += "/Ball" + ofToString(BallID) + "_intro_note";
-                }
+                msg += "/Ball" + ofToString(BallID) + "_note";
                 m.setAddress(msg);
                 m.addIntArg(note[_i]);
                 break;
@@ -253,26 +198,76 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
     }
 }
 //--------------------------------------------------------------
-void ofApp::drawGrid(){
+void ofApp::trackingDraw(){
+    //文字表示画面の背景
+    ofSetColor(0, 0, 0);
+    ofDrawRectangle(0, 0, ofGetWidth(),100);
+    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
     
-    ofPushMatrix();
-    ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
-    int lines = ofGetWidth()/2/20+1;
-    ofSetColor(70, 70, 70);
-    for (int i=0; i < lines; i++) {
-        ofSetColor(255, 255, 255,2);
-        ofDrawLine(20*i, -1*ofGetHeight()/2, 20*i, ofGetHeight()/2);
-        ofDrawLine(-20*i, -1*ofGetHeight()/2, -20*i, ofGetHeight()/2);
-        ofDrawLine(-1*ofGetWidth()/2, 20*i, ofGetWidth()/2, 20*i);
-        ofDrawLine(-1*ofGetWidth()/2, -20*i, ofGetWidth()/2, -20*i);
-    }
-    ofPopMatrix();
-    for(int i = 0 ; i < ofGetHeight() ; i ++){
-        if((20*i)%100 == 0){
-            ofSetColor(255, 0, 0 );
-            ofDrawBitmapString( ofToString(i*20) , 10, 20*i);
+    for(int i = 0 ; i < BALL_NUM ; i++){
+        ofSetColor(255, 255, 255);
+        //動画サイズ(フルHD)をWindow Sizeに変換
+        float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
+        float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
+        
+        int j;
+        if(i == 0){ //LEFT
+            j = 1;
+            ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , (j+1)*300, 20);
+        }else{ //RIGHT
+            j = 0 ;
+            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , (j+1)*300, 20);
+        }
+        ofDrawBitmapString( "x = " + ofToString(x) , (j+1)*300, 40);
+        ofDrawBitmapString( "y = " + ofToString(y) , (j+1)*300, 60);
+        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (j+1)*300, 80);
+        ofDrawBitmapString( "note = " + ofToString(note[i]) , (j+1)*300, 100);
+        
+        //ball
+        ofSetColor(i*100 + ofMap(attack[i],0,1500,0,255), 255, 255);
+        ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
+        ofDrawCircle(x,y, 1);
+        
+        for(int i = 0 ; i < ofGetHeight() ; i ++){
+            if((20*i)%100 == 0){
+                ofSetColor(255, 0, 0 );
+                ofDrawBitmapString( ofToString(i*20) , 10, 20*i);
+            }
         }
     }
+
+}
+//--------------------------------------------------------------
+void ofApp::graphDraw(){
+    for(int i = 1 ; i < 2 ; i++){
+        ofSetColor(255, 255, 255);
+        //動画サイズ(フルHD)をWindow Sizeに変換
+        float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
+        float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
+        
+        int j = 0;
+        if(attack[i] != 0){
+            j = 100;
+            ofDrawBitmapString( "ID = " + ofToString(i), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+5);
+            ofDrawBitmapString( "Attack = " + ofToString(attack[i]), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+15);
+        }
+        //ball
+        ofBeginShape();
+        ofSetColor(i*100 + j, 100*(i+1), 155 + j);
+        //ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
+        ofVertex(ofMap(countFrame,0,2000,0,ofGetWidth()),y);
+        ofDrawCircle(ofMap(countFrame,0,2000,0,ofGetWidth()),y, 1 + (j/20));
+        ofEndShape();
+        
+        //座標の描画
+        for(int i = 0 ; i < ofGetHeight() ; i ++){
+            if((20*i)%100 == 0){
+                ofSetColor(255, 0, 0 );
+                ofDrawBitmapString( ofToString(ofGetHeight() - i*20) , 10, 20*i);
+            }
+        }
+    }
+    
 }
 //--------------------------------------------------------------
 void ofApp::lowpassFilter(float _posPrev, float _posNew){
@@ -281,7 +276,7 @@ void ofApp::lowpassFilter(float _posPrev, float _posNew){
 }
 //--------------------------------------------------------------
 void ofApp::debug(BallPacket _bp){
-    cout << "＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
+    cout << "＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
     cout <<  "header = " << _bp.header << endl;
     cout <<  "index = " << _bp.index << endl;
     cout <<  "ballId = " << _bp.ballId << endl;
@@ -300,58 +295,11 @@ void ofApp::mainSoundCreate(int _i){
     }else{
         note[_i] = 3 * (_i+1);
     }
+}
+//--------------------------------------------------------------
+void ofApp::keyPressed(int key){
+
     
-}
-//--------------------------------------------------------------
-void ofApp::introSoundCreate(){
-    introTime = (ofGetElapsedTimeMillis()-startTime)/100;
-    measure_num = (introTime/int(BPM))+1; //小節数(1~10)
-    switch (measure_num) {
-        case 1:
-            note[0] = 1;
-            break;
-        case 2:
-            note[1] = 2;
-            break;
-        case 4:
-            note[0] = 3;
-            break;
-        case 6:
-            note[1] = 4;
-            break;
-        case 11:
-            introFlg = false;
-            mainFlg = true;
-            break;
-        default:
-            break;
-    }
-}
-//--------------------------------------------------------------
-void ofApp::keyPressed(int key){ //本当はOSCで1を受けたタイミング
-    if(key == 's'){
-        //startTime = ofGetElapsedTimeMillis();
-        //introCue = false;
-         introFlg = true;
-    }
-}
-//--------------------------------------------------------------
-void ofApp::startIntro(){
-        if(countFrame > 600 && !mainFlg){
-            if(bp[LEFT-1].x == 0.0){ //左Playerのボールが消えたら、イントロダクションフェーズ開始
-                introFlg = true;
-            }
-        }
-}
-//--------------------------------------------------------------
-void ofApp::startCount(){
-    if(attack[0] != 0 && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
-        startTime = ofGetElapsedTimeMillis();
-        introCue = false;
-    }
-    if(!introCue){
-        introSoundCreate();
-    }
 }
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
