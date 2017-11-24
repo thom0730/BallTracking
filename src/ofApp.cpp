@@ -70,10 +70,10 @@ void ofApp::update(){
     //配列に受信した構造体を格納
     bp[number] = packet;
     //衝突検出
-    detect(number);
+    detect2(number);
     
     //音の処理のタイムライン
-    startIntro();
+   // startIntro();
     if(introFlg){
         startCount();
     }
@@ -183,6 +183,30 @@ void ofApp::detect(int _i){
         buffvec[_i] = vec[_i];
     }
     
+}
+//--------------------------------------------------------------
+void ofApp::detect2(int _i){
+    //前のフレームの座標->現在座標のベクトルを生成
+    vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
+    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
+    float x = vec[_i].x * buffvec[_i].x;
+    float y = vec[_i].y * buffvec[_i].y;
+    
+    attack[_i] = 0;
+    
+    if(y < Threshold){
+        //現在ベクトルの大きさをattackとして出力
+        attack[_i] = ABS(bp[_i].y - buffy[_i]);
+        
+        //ボールが消えた時のattackの検出を外す
+        if(attack[_i] > 400 ){
+            attack[_i]  = 0;
+        }
+    }
+    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
+    buffx[_i] = bp[_i].x;
+    buffy[_i] = bp[_i].y;
+    buffvec[_i] = vec[_i];
 }
 //--------------------------------------------------------------
 void ofApp::sendOSC(BallPacket _bp, int _i){
@@ -306,14 +330,15 @@ void ofApp::introSoundCreate(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){ //本当はOSCで1を受けたタイミング
     if(key == 's'){
-        startTime = ofGetElapsedTimeMillis();
-        introCue = false;
+        //startTime = ofGetElapsedTimeMillis();
+        //introCue = false;
+         introFlg = true;
     }
 }
 //--------------------------------------------------------------
 void ofApp::startIntro(){
         if(countFrame > 600 && !mainFlg){
-            if(bp[LEFT-1].x == 0.0){
+            if(bp[LEFT-1].x == 0.0){ //左Playerのボールが消えたら、イントロダクションフェーズ開始
                 introFlg = true;
             }
         }

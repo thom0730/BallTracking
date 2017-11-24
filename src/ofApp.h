@@ -46,6 +46,7 @@ class ofApp : public ofBaseApp{
     void debug(BallPacket _bp);
     void sendOSC(BallPacket _bp, int _i);
     void detect(int _i);
+    void detect2(int _i);
     void drawGrid();
     void mainSoundCreate(int _i);
     void introSoundCreate();
