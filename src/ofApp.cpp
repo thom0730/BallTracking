@@ -144,12 +144,12 @@ void ofApp::detect2(int _i){
     if(y < Threshold && vec[_i].y < 0){
         //現在ベクトルの大きさをattackとして出力
         attack[_i] = ABS(bp[_i].y - buffy[_i]);
-        
+        cout <<y<< endl;
         //ボールが消えた時のattackの検出を外す
         if(attack[_i] > 400 ){
             attack[_i]  = 0;
         }else if(attack[_i] > 1.0 && attack[_i] < 10.0){
-           // attack[_i] = 10.0;
+            attack[_i] = 10.0;
         }
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
@@ -239,7 +239,7 @@ void ofApp::trackingDraw(){
 }
 //--------------------------------------------------------------
 void ofApp::graphDraw(){
-    for(int i = 1 ; i < 2 ; i++){
+    for(int i = 0 ; i < 2 ; i++){
         ofSetColor(255, 255, 255);
         //動画サイズ(フルHD)をWindow Sizeに変換
         float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
@@ -250,6 +250,8 @@ void ofApp::graphDraw(){
             j = 100;
             ofDrawBitmapString( "ID = " + ofToString(i), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+5);
             ofDrawBitmapString( "Attack = " + ofToString(attack[i]), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+15);
+           
+            
         }
         //ball
         ofBeginShape();
