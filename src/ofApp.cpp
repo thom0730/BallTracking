@@ -115,14 +115,15 @@ void ofApp::draw(){
         }
         ofDrawBitmapString( "x = " + ofToString(x) , (j+1)*300, 40);
         ofDrawBitmapString( "y = " + ofToString(y) , (j+1)*300, 60);
-        ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , (j+1)*300, 80);
+        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (j+1)*300, 80);
         ofDrawBitmapString( "note = " + ofToString(note[i]) , (j+1)*300, 100);
 
         //ball
-        ofSetColor(i*100 + ofMap(VecSize[i],0,1500,0,255), 255, 255);
+        ofSetColor(i*100 + ofMap(attack[i],0,1500,0,255), 255, 255);
         ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
         ofDrawCircle(x,y, 5);
         
+        /*
         //速度ベクトル
         float buffX = ofMap(buffx[i],0,fullHD_x,0,ofGetWidth());
         float buffY = ofMap(buffy[i],0,fullHD_y,0,ofGetHeight());
@@ -132,7 +133,7 @@ void ofApp::draw(){
         float vecY = -1 * ofMap(vec[i].y,0,fullHD_y,0,ofGetHeight());
         ofSetColor(0, 255, 0);
         ofDrawLine(buffX, buffY, buffX+vecX, buffY+vecY); //バッファベクトル
-
+         */
     }
 
     ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
@@ -154,23 +155,26 @@ void ofApp::draw(){
 }
 //--------------------------------------------------------------
 void ofApp::detect(int _i){
-    VecSize[_i] = 0;
+    attack[_i] = 0;
     
     if(countFrame%SAMPLE_RATE == 0){
+        //ローパスフィルタ
+        lowpassFilter(buffx[_i],bp[_i].x);
+        lowpassFilter(buffy[_i],bp[_i].y);
         //前のフレームの座標->現在座標のベクトルを生成
+        lowpassFilter(buffx[_i],bp[_i].x);
+        lowpassFilter(buffy[_i],bp[_i].y);
         vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
+       // cout <<vec[_i].dot(buffvec[_i]) << endl;
         //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
-        float producXx = vec[_i].x * buffvec[_i].x;
-        float productY = vec[_i].y * buffvec[_i].y;
-        
-        if(vec[_i].dot(buffvec[_i])<0 && buffvec[_i].y < 0){
-      //  if(productY < Threshold && buffvec[_i].y < 0){
+        if(vec[_i].dot(buffvec[_i])<0 && vec[_i].y > 0){
+
             //現在ベクトルの大きさをattackとして出力
-            VecSize[_i] = ABS(bp[_i].y - buffy[_i]);
-            
+            attack[_i] = ABS(bp[_i].y - buffy[_i]);
+            cout << "attack = " << attack[_i] << endl;
             //ボールが消えた時のattackの検出を外す
-            if(VecSize[_i] > 400 ){
-                VecSize[_i]  = 0;
+            if(attack[_i] > 400 ){
+                attack[_i]  = 0;
             }
         }
         //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
@@ -207,7 +211,7 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
             case 2:
                 msg += "/Ball" + ofToString(BallID) + "_attack";
                 m.setAddress(msg);
-                m.addFloatArg(VecSize[_i]);
+                m.addFloatArg(attack[_i]);
                 break;
             case 3:
                 if(introFlg || mainFlg){
@@ -247,8 +251,8 @@ void ofApp::drawGrid(){
     }
 }
 //--------------------------------------------------------------
-void ofApp::lowpassFilter(ofVec3f _vecPrev, ofVec3f _vecNew){
-    _vecPrev = alpha * _vecPrev + (1-alpha) * _vecNew;
+void ofApp::lowpassFilter(float _posPrev, float _posNew){
+    _posPrev = alpha * _posPrev + (1-alpha) * _posNew;
 
 }
 //--------------------------------------------------------------
@@ -316,7 +320,7 @@ void ofApp::startIntro(){
 }
 //--------------------------------------------------------------
 void ofApp::startCount(){
-    if(VecSize[0] != 0 && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
+    if(attack[0] != 0 && introCue){ //Note=1の最初のAttackを検出 & introCueがTrue(1周もしていない) => introduction：カウント開始
         startTime = ofGetElapsedTimeMillis();
         introCue = false;
     }

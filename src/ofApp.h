@@ -51,7 +51,7 @@ class ofApp : public ofBaseApp{
     void introSoundCreate();
     void startIntro();
     void startCount();
-    void lowpassFilter(ofVec3f vecPrev, ofVec3f vecNew);
+    void lowpassFilter(float _posPrev, float _posNew);
     float alpha = 0.8;
 
     int fullHD_x = 1920;
@@ -75,7 +75,7 @@ class ofApp : public ofBaseApp{
     float buffx[BALL_NUM], buffy[BALL_NUM]; //1フレーム前の位置
     ofVec3f vec[BALL_NUM];//現在のベクトル
     ofVec3f buffvec[BALL_NUM]; //1フレーム前のベクトル
-    float VecSize[BALL_NUM]; //Attackデータ
+    float attack[BALL_NUM]; //Attackデータ
     int note[BALL_NUM]; // 音色データ
     
     //GUI
