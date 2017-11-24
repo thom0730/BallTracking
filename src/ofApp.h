@@ -14,7 +14,6 @@
 #define RIGHT 1
 #define LEFT 2
 
-    
 struct BallPacket{
     uint32_t header;
     uint32_t index;
@@ -52,6 +51,8 @@ class ofApp : public ofBaseApp{
     void introSoundCreate();
     void startIntro();
     void startCount();
+    void lowpassFilter(ofVec3f vecPrev, ofVec3f vecNew);
+    float alpha = 0.8;
 
     int fullHD_x = 1920;
     int fullHD_y = 1080;

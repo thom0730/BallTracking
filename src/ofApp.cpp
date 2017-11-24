@@ -67,7 +67,6 @@ void ofApp::update(){
         }
     }
     buffArrID = number; //前フレームに受けたボールのID
-    
     //配列に受信した構造体を格納
     bp[number] = packet;
     //衝突検出
@@ -83,7 +82,6 @@ void ofApp::update(){
              mainSoundCreate(i);
         }
     }
-
     //OSC 送信
     for(int i = 0  ; i < BALL_NUM ; i++){
         sendOSC(bp[i], i);
@@ -101,50 +99,42 @@ void ofApp::draw(){
     ofSetColor(0, 0, 0);
     ofDrawRectangle(0, 0, ofGetWidth(),100);
     
-    for(int i = 0 ; i < 2 ; i++){
+    for(int i = 0 ; i < BALL_NUM ; i++){
+        ofSetColor(255, 255, 255);
         //動画サイズ(フルHD)をWindow Sizeに変換
         float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
         float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
         
-        if(x < ofGetWidth()/2){
-            //(0,0)を受信した時のIDの振り分け
-            int number;
-            if(packet.ballId == 0){
-                if(buffArrID == (LEFT-1)){
-                    //display
-                    ofSetColor(255, 255, 255);
-                    ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , 2*300, 20);
-                    ofDrawBitmapString( "x = " + ofToString(x) , 2*300, 40);
-                    ofDrawBitmapString( "y = " + ofToString(y) , 2*300, 60);
-                    ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 2*300, 80);
-                    ofDrawBitmapString( "note = " + ofToString(note[i]) , 2*300, 100);
-                }
-            }else{
-                //display
-                ofSetColor(255, 255, 255);
-                ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , 300, 20);
-                ofDrawBitmapString( "x = " + ofToString(x) , 300, 40);
-                ofDrawBitmapString( "y = " + ofToString(y) , 300, 60);
-                ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 300, 80);
-                ofDrawBitmapString( "note = " + ofToString(note[i]) , 300, 100);
-            }
-        }else{
-            //display
-            ofSetColor(255, 255, 255);
-            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , 2*300, 20);
-            ofDrawBitmapString( "x = " + ofToString(x) , 2*300, 40);
-            ofDrawBitmapString( "y = " + ofToString(y) , 2*300, 60);
-            ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , 2*300, 80);
-            ofDrawBitmapString( "note = " + ofToString(note[i]) , 2*300, 100);
+        int j;
+        if(i == 0){ //RIGHT
+            j = 1;
+            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , (j+1)*300, 20);
+        }else{ //LEFT
+            j = 0 ;
+            ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , (j+1)*300, 20);
         }
+        ofDrawBitmapString( "x = " + ofToString(x) , (j+1)*300, 40);
+        ofDrawBitmapString( "y = " + ofToString(y) , (j+1)*300, 60);
+        ofDrawBitmapString( "attack = " + ofToString(VecSize[i]) , (j+1)*300, 80);
+        ofDrawBitmapString( "note = " + ofToString(note[i]) , (j+1)*300, 100);
+
         //ball
         ofSetColor(i*100 + ofMap(VecSize[i],0,1500,0,255), 255, 255);
         ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
         ofDrawCircle(x,y, 5);
+        
+        //速度ベクトル
+        float buffX = ofMap(buffx[i],0,fullHD_x,0,ofGetWidth());
+        float buffY = ofMap(buffy[i],0,fullHD_y,0,ofGetHeight());
+        ofSetColor(255, 0, 0);
+        ofDrawLine(x, y, buffX, buffY); //現在ベクトル
+        float vecX = -1 * ofMap(vec[i].x,0,fullHD_x,0,ofGetWidth());
+        float vecY = -1 * ofMap(vec[i].y,0,fullHD_y,0,ofGetHeight());
+        ofSetColor(0, 255, 0);
+        ofDrawLine(buffX, buffY, buffX+vecX, buffY+vecY); //バッファベクトル
+
     }
 
-    
-    
     ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
     if(introFlg){
         ofDrawBitmapString("Introduction" , ofGetWidth() - 300, 20);
@@ -154,6 +144,7 @@ void ofApp::draw(){
     }else if(mainFlg){
         ofDrawBitmapString("Main Performance" , ofGetWidth() - 300, 20);
     }
+  
     //方眼紙
     drawGrid();
     // GUIを表示
@@ -254,6 +245,11 @@ void ofApp::drawGrid(){
             ofDrawBitmapString( ofToString(i*20) , 10, 20*i);
         }
     }
+}
+//--------------------------------------------------------------
+void ofApp::lowpassFilter(ofVec3f _vecPrev, ofVec3f _vecNew){
+    _vecPrev = alpha * _vecPrev + (1-alpha) * _vecNew;
+
 }
 //--------------------------------------------------------------
 void ofApp::debug(BallPacket _bp){
