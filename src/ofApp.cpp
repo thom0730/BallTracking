@@ -84,11 +84,11 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    // 画面をフェード
     ofSetColor(0, 0, 0, 5);
+    
   //  ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
-
    // trackingDraw();
+    
     graphDraw();
 
     //方眼紙
@@ -121,6 +121,11 @@ void ofApp::detect(int _i){
                 attack[_i]  = 0;
             }
         }
+
+        //2フレーム前のバッファ
+        bbuffx[_i] = buffx[_i];
+        bbuffx[_i] = buffx[_i];
+        bbuffvec[_i] =  buffvec[_i];
         //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
         buffx[_i] = bp[_i].x;
         buffy[_i] = bp[_i].y;
@@ -130,6 +135,8 @@ void ofApp::detect(int _i){
 }
 //--------------------------------------------------------------
 void ofApp::detect2(int _i){
+    attack[_i] = 0;
+
     //ローパスフィルタ
     lowpassFilter(buffx[_i],bp[_i].x);
     lowpassFilter(buffy[_i],bp[_i].y);
@@ -139,19 +146,72 @@ void ofApp::detect2(int _i){
     float x = vec[_i].x * buffvec[_i].x;
     float y = vec[_i].y * buffvec[_i].y;
     
-    attack[_i] = 0;
-    
     if(y < Threshold && vec[_i].y < 0){
         //現在ベクトルの大きさをattackとして出力
         attack[_i] = ABS(bp[_i].y - buffy[_i]);
-        cout <<y<< endl;
+        cout <<attack[_i]<< endl;
         //ボールが消えた時のattackの検出を外す
-        if(attack[_i] > 400 ){
+        if(attack[_i] > 200 ){
+            attack[_i]  = 0;
+        }else if(attack[_i] > 12.8 && attack[_i] < 12.9){
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 2.245 && attack[_i] < 2.256){
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 5.226 && attack[_i] < 6.227){ //5.22614
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 3.716 && attack[_i] < 3.717){ //3.71637
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 2.204 && attack[_i] < 2.205){ //2.20477
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 67.430 && attack[_i] < 67.431){ //67.4006
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 14.246 && attack[_i] < 14.247){ //67.4006
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 4.1881 && attack[_i] < 4.1882){ //4.18817
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 2.6350 && attack[_i] < 2.6351){ //4.18817
+            attack[_i] = 0.0;
+        }else if(attack[_i] > 2.1 && attack[_i] < 10.0){
+            attack[_i] = 10.0;
+        }else if(attack[_i] < 2.1 ){
+            attack[_i] = 0.0;
+        }
+            
+    }
+    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
+    buffx[_i] = bp[_i].x;
+    buffy[_i] = bp[_i].y;
+    buffvec[_i] = vec[_i];
+
+}
+//--------------------------------------------------------------
+void ofApp::detect3(int _i){
+    //2フレーム前のバッファ
+    bbuffx[_i] = buffx[_i];
+    bbuffy[_i] = buffy[_i];
+    
+    //ローパスフィルタ
+  //  lowpassFilter(buffx[_i],bp[_i].x);
+   // lowpassFilter(buffy[_i],bp[_i].y);
+    //前のフレームの座標->現在座標の速度ベクトルを生成
+    vec[_i].set(bp[_i].x - bbuffx[_i] , bp[_i].y - bbuffy[_i]);
+    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
+    float x = vec[_i].x * buffvec[_i].x;
+    float y = vec[_i].y * buffvec[_i].y;
+
+    attack[_i] = 0;
+    if(y < Threshold && vec[_i].y < 0){
+        //現在ベクトルの大きさをattackとして出力
+        attack[_i] = ABS(bp[_i].y - bbuffy[_i]);
+        
+        //ボールが消えた時のattackの検出を外す
+     /*   if(attack[_i] > 400 ){
             attack[_i]  = 0;
         }else if(attack[_i] > 1.0 && attack[_i] < 10.0){
             attack[_i] = 10.0;
-        }
+        }*/
     }
+
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
     buffy[_i] = bp[_i].y;
@@ -248,10 +308,9 @@ void ofApp::graphDraw(){
         int j = 0;
         if(attack[i] != 0){
             j = 100;
-            ofDrawBitmapString( "ID = " + ofToString(i), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+5);
-            ofDrawBitmapString( "Attack = " + ofToString(attack[i]), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+15);
-           
-            
+            ofDrawBitmapString( "ID = " + ofToString(i), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+40);
+            ofDrawBitmapString( "Attack = " + ofToString(attack[i]), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+60);
+
         }
         //ball
         ofBeginShape();

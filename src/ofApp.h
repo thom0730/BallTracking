@@ -7,7 +7,7 @@
 #include "drawData.hpp"
 
 #define BALL_NUM 2
-#define SAMPLE_RATE 5
+#define SAMPLE_RATE 2
 #define HOST "127.0.0.1" // 受信側のIPアドレス
 #define PORT 8000 // 受信側のポート番
 
@@ -50,6 +50,7 @@ class ofApp : public ofBaseApp{
     void sendOSC(BallPacket _bp, int _i);
     void detect(int _i);
     void detect2(int _i);
+    void detect3(int _i);
     void mainSoundCreate(int _i);
     void lowpassFilter(float _posPrev, float _posNew);
     float alpha = 0.8;
@@ -70,6 +71,8 @@ class ofApp : public ofBaseApp{
     float buffx[BALL_NUM], buffy[BALL_NUM]; //1フレーム前の位置
     ofVec3f vec[BALL_NUM];//現在のベクトル
     ofVec3f buffvec[BALL_NUM]; //1フレーム前のベクトル
+    float bbuffx[BALL_NUM], bbuffy[BALL_NUM]; //1フレーム前の位置
+    ofVec3f bbuffvec[BALL_NUM]; //1フレーム前のベクトル
     float attack[BALL_NUM]; //Attackデータ
     int note[BALL_NUM]; // 音色データ
     
@@ -80,4 +83,6 @@ class ofApp : public ofBaseApp{
     ofxOscSender sender;
     
     drawData drawdata;
+    
+
 };
