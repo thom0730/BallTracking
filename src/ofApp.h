@@ -8,8 +8,8 @@
 
 #define BALL_NUM 2
 #define SAMPLE_RATE 2
-#define HOST "127.0.0.1" // 受信側のIPアドレス
-#define PORT 8000 // 受信側のポート番
+#define HOST "127.0.0.1" // IPアドレス
+#define PORT 8000 // ポート番
 
 //ボール番号の割り振り
 #define LEFT 1

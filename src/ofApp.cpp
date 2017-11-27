@@ -6,9 +6,8 @@ void ofApp::setup(){
     //ofSetWindowShape(400, 400);
     ofBackground(0, 0, 0);
     ofSetVerticalSync(true);
-    ofSetFrameRate(60);
+  //  ofSetFrameRate(30);
     ofEnableAlphaBlending();
-    ofSetPolyMode(OF_POLY_WINDING_NONZERO); // this is the normal mode
     
     //UDP set up
     if (isBind) { // Bind済みかどうかのbool
@@ -68,28 +67,25 @@ void ofApp::update(){
         }
     }
     buffArrID = number; //前フレームに受けたボールのID
-    
-    
     //配列に受信した構造体を格納
     bp[number] = packet;
     //衝突検出(attackの検出)
     detect2(number);
     
+    //noteの割り振り
+    mainSoundCreate(number);
     //OSC 送信
-    for(int i = 0  ; i < BALL_NUM ; i++){
-        mainSoundCreate(i);
-        sendOSC(bp[i], i);
-    }
+    sendOSC(bp[number], number);
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofSetColor(0, 0, 0, 5);
     
-  //  ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
-   // trackingDraw();
+    ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
+    trackingDraw();
     
-    graphDraw();
+    //graphDraw();
 
     //方眼紙
     drawdata.drawGrid();
@@ -137,9 +133,6 @@ void ofApp::detect(int _i){
 void ofApp::detect2(int _i){
     attack[_i] = 0;
 
-    //ローパスフィルタ
-    lowpassFilter(buffx[_i],bp[_i].x);
-    lowpassFilter(buffy[_i],bp[_i].y);
     //前のフレームの座標->現在座標の速度ベクトルを生成
     vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
     //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
@@ -149,34 +142,16 @@ void ofApp::detect2(int _i){
     if(y < Threshold && vec[_i].y < 0){
         //現在ベクトルの大きさをattackとして出力
         attack[_i] = ABS(bp[_i].y - buffy[_i]);
-        cout <<attack[_i]<< endl;
+
         //ボールが消えた時のattackの検出を外す
         if(attack[_i] > 200 ){
             attack[_i]  = 0;
-        }else if(attack[_i] > 12.8 && attack[_i] < 12.9){
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 2.245 && attack[_i] < 2.256){
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 5.226 && attack[_i] < 6.227){ //5.22614
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 3.716 && attack[_i] < 3.717){ //3.71637
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 2.204 && attack[_i] < 2.205){ //2.20477
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 67.430 && attack[_i] < 67.431){ //67.4006
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 14.246 && attack[_i] < 14.247){ //67.4006
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 4.1881 && attack[_i] < 4.1882){ //4.18817
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 2.6350 && attack[_i] < 2.6351){ //4.18817
-            attack[_i] = 0.0;
-        }else if(attack[_i] > 2.1 && attack[_i] < 10.0){
-            attack[_i] = 10.0;
-        }else if(attack[_i] < 2.1 ){
-            attack[_i] = 0.0;
         }
-            
+        else if(attack[_i] > 2.5 && attack[_i] < 10.0){
+           // attack[_i] = 10.0;
+        }else if(attack[_i] < 2.1 ){
+            //attack[_i] = 0.0;
+        }
     }
     //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
     buffx[_i] = bp[_i].x;
@@ -191,8 +166,8 @@ void ofApp::detect3(int _i){
     bbuffy[_i] = buffy[_i];
     
     //ローパスフィルタ
-  //  lowpassFilter(buffx[_i],bp[_i].x);
-   // lowpassFilter(buffy[_i],bp[_i].y);
+    lowpassFilter(buffx[_i],bp[_i].x);
+    lowpassFilter(buffy[_i],bp[_i].y);
     //前のフレームの座標->現在座標の速度ベクトルを生成
     vec[_i].set(bp[_i].x - bbuffx[_i] , bp[_i].y - bbuffy[_i]);
     //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
@@ -270,24 +245,22 @@ void ofApp::trackingDraw(){
         float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
         float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
         
-        int j;
-        if(i == 0){ //LEFT
-            j = 1;
-            ofDrawBitmapString( "Ball ID = " + ofToString(LEFT) , (j+1)*300, 20);
-        }else{ //RIGHT
-            j = 0 ;
-            ofDrawBitmapString( "Ball ID = " + ofToString(RIGHT) , (j+1)*300, 20);
-        }
-        ofDrawBitmapString( "x = " + ofToString(x) , (j+1)*300, 40);
-        ofDrawBitmapString( "y = " + ofToString(y) , (j+1)*300, 60);
-        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (j+1)*300, 80);
-        ofDrawBitmapString( "note = " + ofToString(note[i]) , (j+1)*300, 100);
+        ofDrawBitmapString( "Ball ID = " + ofToString(i+1) , (i+1)*300, 20);
+        ofDrawBitmapString( "x = " + ofToString(x) , (i+1)*300, 40);
+        ofDrawBitmapString( "y = " + ofToString(y) , (i+1)*300, 60);
+        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (i+1)*300, 80);
+        ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1)*300, 100);
         
         //ball
-        ofSetColor(i*100 + ofMap(attack[i],0,1500,0,255), 255, 255);
-        ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
-        ofDrawCircle(x,y, 1);
+        int j = 0;
+        if(attack[i] != 0){
+            j = 10;
+        }
+         ofSetColor(i*100 + j, 100*(i+1), 155 + j);
+      //  ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
+        ofDrawCircle(x,y, 3 + j);
         
+        //目盛
         for(int i = 0 ; i < ofGetHeight() ; i ++){
             if((20*i)%100 == 0){
                 ofSetColor(255, 0, 0 );
@@ -299,7 +272,7 @@ void ofApp::trackingDraw(){
 }
 //--------------------------------------------------------------
 void ofApp::graphDraw(){
-    for(int i = 0 ; i < 2 ; i++){
+    for(int i = 0 ; i <2 ; i++){
         ofSetColor(255, 255, 255);
         //動画サイズ(フルHD)をWindow Sizeに変換
         float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
@@ -310,7 +283,6 @@ void ofApp::graphDraw(){
             j = 100;
             ofDrawBitmapString( "ID = " + ofToString(i), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+40);
             ofDrawBitmapString( "Attack = " + ofToString(attack[i]), 10+ofMap(countFrame,0,2000,0,ofGetWidth()),y+60);
-
         }
         //ball
         ofBeginShape();
