@@ -54,9 +54,8 @@ class ofApp : public ofBaseApp{
     void debug(BallPacket _bp);
     void trackingDraw();
     void graphDraw();
-    
-    void lowpassFilter(float _posPrev, float _posNew);
-    float alpha = 0.8;
+    int countFrame;
+
 
 
     //FOR PRESET
@@ -82,16 +81,7 @@ class ofApp : public ofBaseApp{
     
     
     
-    //以下いらないかも
-    void detect1(int _i);
-    void detect2(int _i);
-    void detect3(int _i);
-    float buffx[BALL_NUM], buffy[BALL_NUM]; //1フレーム前の位置
-    ofVec3f vec[BALL_NUM];//現在のベクトル
-    ofVec3f buffvec[BALL_NUM]; //1フレーム前のベクトル
-    float bbuffx[BALL_NUM], bbuffy[BALL_NUM]; //1フレーム前の位置
-    ofVec3f bbuffvec[BALL_NUM]; //1フレーム前のベクトル
-    int countFrame;
+ 
     
     
     

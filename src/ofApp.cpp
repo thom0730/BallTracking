@@ -20,7 +20,7 @@ void ofApp::setup(){
     //GUI set up
     gui.setup();
     gui.add(Threshold.setup("Threshold", -1, -5, 0));
-    gui.add(DetectMIN.setup("The minimum value for detecting a attack", 1.0, 0, 2.0));
+    gui.add(DetectMIN.setup("Min Attack", 1.0, 0, 2.0));
     
     // OSC set up
     sender.setup(HOST, PORT);
@@ -46,10 +46,11 @@ void ofApp::update(){
      画面左：bp[0] BALL1 (LEFT = 1)
      画面右：bp[1] BALL2 (RIGHT = 2)
      ============================*/
-    
+    /*
     //データを受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-   // debug(packet);
+    debug(packet);
+  
     //IDを整理
     int num = 0;
     if(packet.x < fullHD_x/2){
@@ -69,20 +70,24 @@ void ofApp::update(){
         }
     }
     buffArrID = num; //前フレームに受けたボールのID
-
     bp[num] = packet; //配列に受信した構造体を格納
     buffering(bp[num],num); //座標位置をサンプリング用のバッファに格納
+    attack[num] = 0; // 衝突判定の前に毎度Attackを初期化
     detect(bp[num],num);
     //detect2(num);
     mainSoundCreate(bp[num],num);
     sendOSC(bp[num], num);
-    
+    */
     
 
-    /*
+    
      //遅延する場合
     int cnt = 0;
     int num = 0;
+    //attackの初期化
+    for(int i = 0 ; i < BALL_NUM ; i++){
+        attack[i] = 0;
+    }
      while(1){
          udpConnect.Receive((char*)&packet,(int)sizeof(packet));
          debug(packet);
@@ -96,16 +101,15 @@ void ofApp::update(){
          }else{
              num = RIGHT-1;
          }
-         buffering(packet,num);
-         cnt++;
+         bp[num] = packet;
+         buffering(bp[num] ,num); //左右それぞれの座標位置をバッファに格納
+         detect(bp[num] ,num);
      }
-    if(num != 0){
-        detect(ballpacket[cnt],num);
-        mainSoundCreate(ballpacket[cnt],num);
-        sendOSC(ballpacket[cnt],num);
+    //OSC送信
+    for(int i = 0 ; i < BALL_NUM ; i++){
+        sendOSC(bp[i],i);
     }
-     */
-
+    
      //初期化
      ballpacket.clear();
 
@@ -150,7 +154,6 @@ void ofApp::buffering(BallPacket _bp, int _i){
 }
 //--------------------------------------------------------------
 void ofApp::detect(BallPacket _bp, int _i){
-    attack[_i] = 0;
     if(_i == (LEFT-1)){
         //SAMPLE_RATEフレーム前の座標位置から現在位置への速度ベクトル
         L_vec.set(_bp.x - Lprev_x[SAMPLE_RATE-1],_bp.y - Lprev_y[SAMPLE_RATE-1]);
@@ -252,104 +255,7 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
         sender.sendMessage(m);
     }
 }
-//--------------------------------------------------------------
-void ofApp::detect1(int _i){
-    attack[_i] = 0;
-    
-    if(countFrame%SAMPLE_RATE == 0){
-        //ローパスフィルタ
-        lowpassFilter(buffx[_i],bp[_i].x);
-        lowpassFilter(buffy[_i],bp[_i].y);
-        lowpassFilter(buffx[_i],bp[_i].x);
-        lowpassFilter(buffy[_i],bp[_i].y);
-        //前のフレームの座標->現在座標のベクトルを生成
-        vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
 
-        //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
-        if(vec[_i].dot(buffvec[_i])<0 && vec[_i].y > 0){
-
-            //現在ベクトルの大きさをattackとして出力
-            attack[_i] = ABS(bp[_i].y - buffy[_i]);
-            //ボールが消えた時のattackの検出を外す
-            if(attack[_i] > 400 ){
-                attack[_i]  = 0;
-            }
-        }
-
-        //2フレーム前のバッファ
-        bbuffx[_i] = buffx[_i];
-        bbuffx[_i] = buffx[_i];
-        bbuffvec[_i] =  buffvec[_i];
-        //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
-        buffx[_i] = bp[_i].x;
-        buffy[_i] = bp[_i].y;
-        buffvec[_i] = vec[_i];
-    }
-    
-}
-//--------------------------------------------------------------
-void ofApp::detect2(int _i){
-    attack[_i] = 0;
-
-    //前のフレームの座標->現在座標の速度ベクトルを生成
-    vec[_i].set(bp[_i].x - buffx[_i] , bp[_i].y - buffy[_i]);
-    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
-    float x = vec[_i].x * buffvec[_i].x;
-    float y = vec[_i].y * buffvec[_i].y;
-    
-    if(y < Threshold && vec[_i].y < 0){
-        //現在ベクトルの大きさをattackとして出力
-        attack[_i] = ABS(bp[_i].y - buffy[_i]);
-
-        //ボールが消えた時のattackの検出を外す
-        if(attack[_i] > 200 ){
-            attack[_i]  = 0;
-        }
-        else if(attack[_i] > 2.5 && attack[_i] < 10.0){
-           // attack[_i] = 10.0;
-        }else if(attack[_i] < 2.1 ){
-            //attack[_i] = 0.0;
-        }
-    }
-    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
-    buffx[_i] = bp[_i].x;
-    buffy[_i] = bp[_i].y;
-    buffvec[_i] = vec[_i];
-
-}
-//--------------------------------------------------------------
-void ofApp::detect3(int _i){
-    //2フレーム前のバッファ
-    bbuffx[_i] = buffx[_i];
-    bbuffy[_i] = buffy[_i];
-    
-    //ローパスフィルタ
-    lowpassFilter(buffx[_i],bp[_i].x);
-    lowpassFilter(buffy[_i],bp[_i].y);
-    //前のフレームの座標->現在座標の速度ベクトルを生成
-    vec[_i].set(bp[_i].x - bbuffx[_i] , bp[_i].y - bbuffy[_i]);
-    //前フレームで生成したベクトルと現在ベクトルの積が負になれば速度ベクトルが逆転していると判定
-    float x = vec[_i].x * buffvec[_i].x;
-    float y = vec[_i].y * buffvec[_i].y;
-
-    attack[_i] = 0;
-    if(y < Threshold && vec[_i].y < 0){
-        //現在ベクトルの大きさをattackとして出力
-        attack[_i] = ABS(bp[_i].y - bbuffy[_i]);
-        
-        //ボールが消えた時のattackの検出を外す
-     /*   if(attack[_i] > 400 ){
-            attack[_i]  = 0;
-        }else if(attack[_i] > 1.0 && attack[_i] < 10.0){
-            attack[_i] = 10.0;
-        }*/
-    }
-
-    //現在座標をバッファに格納し、次フレームでのベクトル生成に使用
-    buffx[_i] = bp[_i].x;
-    buffy[_i] = bp[_i].y;
-    buffvec[_i] = vec[_i];
-}
 //--------------------------------------------------------------
 void ofApp::trackingDraw(){
 
@@ -425,11 +331,7 @@ void ofApp::graphDraw(){
     ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
 
 }
-//--------------------------------------------------------------
-void ofApp::lowpassFilter(float _posPrev, float _posNew){
-    _posPrev = alpha * _posPrev + (1-alpha) * _posNew;
 
-}
 //--------------------------------------------------------------
 void ofApp::debug(BallPacket _bp){
     cout <<  "header = " << _bp.header << endl;
