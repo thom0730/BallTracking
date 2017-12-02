@@ -6,7 +6,7 @@ void ofApp::setup(){
     //ofSetWindowShape(400, 400);
     ofBackground(0, 0, 0);
     ofSetVerticalSync(true);
-  //  ofSetFrameRate(30);
+    ofSetFrameRate(60);
     ofEnableAlphaBlending();
     
     //UDP set up
@@ -41,7 +41,14 @@ void ofApp::update(){
     countFrame++;
     //UDP受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-   //debug(packet);
+    debug(packet);
+    cout << "1＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
+    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+    debug(packet);
+    cout << "2＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
+    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+    debug(packet);
+    cout << "3＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
 
     /*============================
      画面左：bp[0] BALL1 (LEFT = 1)
@@ -82,9 +89,11 @@ void ofApp::update(){
 void ofApp::draw(){
     ofSetColor(0, 0, 0, 5);
     
+    //X-Y展開
     ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
     trackingDraw();
     
+    //Y-T展開
     //graphDraw();
 
     //方眼紙
@@ -234,11 +243,9 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
 }
 //--------------------------------------------------------------
 void ofApp::trackingDraw(){
-    //文字表示画面の背景
+
     ofSetColor(0, 0, 0);
-    ofDrawRectangle(0, 0, ofGetWidth(),100);
-    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
-    
+    ofDrawRectangle(0, 0, ofGetWidth(), 110);
     for(int i = 0 ; i < BALL_NUM ; i++){
         ofSetColor(255, 255, 255);
         //動画サイズ(フルHD)をWindow Sizeに変換
@@ -250,7 +257,7 @@ void ofApp::trackingDraw(){
         ofDrawBitmapString( "y = " + ofToString(y) , (i+1)*300, 60);
         ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (i+1)*300, 80);
         ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1)*300, 100);
-        
+
         //ball
         int j = 0;
         if(attack[i] != 0){
@@ -268,10 +275,13 @@ void ofApp::trackingDraw(){
             }
         }
     }
-
+    //FPSの表示
+    ofSetColor(255, 255, 255);
+    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
 }
 //--------------------------------------------------------------
 void ofApp::graphDraw(){
+    
     for(int i = 0 ; i <2 ; i++){
         ofSetColor(255, 255, 255);
         //動画サイズ(フルHD)をWindow Sizeに変換
@@ -301,6 +311,10 @@ void ofApp::graphDraw(){
         }
     }
     
+    //FPSの表示
+    ofSetColor(255, 255, 255);
+    ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
+
 }
 //--------------------------------------------------------------
 void ofApp::lowpassFilter(float _posPrev, float _posNew){
@@ -309,7 +323,6 @@ void ofApp::lowpassFilter(float _posPrev, float _posNew){
 }
 //--------------------------------------------------------------
 void ofApp::debug(BallPacket _bp){
-    cout << "＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
     cout <<  "header = " << _bp.header << endl;
     cout <<  "index = " << _bp.index << endl;
     cout <<  "ballId = " << _bp.ballId << endl;
