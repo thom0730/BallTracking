@@ -20,6 +20,7 @@ void ofApp::setup(){
     //GUI set up
     gui.setup();
     gui.add(Threshold.setup("Threshold", -1, -5, 0));
+    gui.add(DetectMIN.setup("The minimum value for detecting a attack", 1.0, 0, 2.0));
     
     // OSC set up
     sender.setup(HOST, PORT);
@@ -167,11 +168,11 @@ void ofApp::detect(BallPacket _bp, int _i){
                 attack[_i]  = 0;
             }
             //アタックが小さい場合のアンプ
-            else if(attack[_i] > 1.0 && attack[_i] < 10.0){
+            else if(attack[_i] > DetectMIN && attack[_i] < 10.0){
                  attack[_i] = 10.0;
             }
             //アタックが小さすぎる場合は除去
-            else if(attack[_i] < 1.0){
+            else if(attack[_i] < DetectMIN){
                 attack[_i] = 0.0;
             }
         }
@@ -188,10 +189,10 @@ void ofApp::detect(BallPacket _bp, int _i){
             if(attack[_i] > 200 ){
                 attack[_i]  = 0;
             }
-            else if(attack[_i] > 1.0 && attack[_i] < 10.0){
+            else if(attack[_i] > DetectMIN && attack[_i] < 10.0){
                 attack[_i] = 10.0;
             }
-            else if(attack[_i] < 1.0){
+            else if(attack[_i] < DetectMIN){
                 attack[_i] = 0.0;
             }
  

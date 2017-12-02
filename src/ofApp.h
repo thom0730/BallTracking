@@ -98,6 +98,7 @@ class ofApp : public ofBaseApp{
     //GUI
     ofxPanel gui;
     ofxFloatSlider Threshold;
+    ofxFloatSlider DetectMIN;
     //OSCメッセージの送信者
     ofxOscSender sender;
     
