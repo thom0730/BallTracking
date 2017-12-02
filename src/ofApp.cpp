@@ -90,10 +90,10 @@ void ofApp::update(){
     }
      while(1){
          udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-         debug(packet);
      if(packet.ballId == 0){
          break;
      }
+         debug(packet);
          ballpacket.push_back(packet);
          //IDを整理
          if(packet.x < fullHD_x/2){
@@ -101,6 +101,18 @@ void ofApp::update(){
          }else{
              num = RIGHT-1;
          }
+         //(0,0)を受信した時のIDの振り分け(左右が順番に送られてくる前提)
+         if(packet.x == 0){
+             switch(buffArrID){
+                 case 0:
+                     num = 1;
+                     break;
+                 case 1:
+                     num = 0;
+                     break;
+             }
+         }
+         buffArrID = num;//1パケット前に受けたボールのID
          bp[num] = packet;
          buffering(bp[num] ,num); //左右それぞれの座標位置をバッファに格納
          detect(bp[num] ,num);
