@@ -146,8 +146,8 @@ void ofApp::detect(BallPacket _bp, int _i){
             //現在ベクトルのy方向大きさをattackとして出力
             attack[_i] = ABS(L_vec.y);
             
-            //ボールが消えた時のattackの検出を外す
-            if(attack[_i] > 200 ){
+            //「ボールが消えた時」と「ボールを持った時」のattackの検出を外す
+            if(attack[_i] > 200){
                 attack[_i]  = 0;
             }
             //アタックが小さい場合のアンプ
@@ -165,7 +165,7 @@ void ofApp::detect(BallPacket _bp, int _i){
         if(y < Threshold && R_vec.y < 0){
              cout <<"R_vec.y = " << R_vec.y << " y = " << y << endl;
             attack[_i] = ABS(R_vec.y);
-            if(attack[_i] > 200 ){
+            if(attack[_i] > 200{
                 attack[_i]  = 0;
             }
             else if(attack[_i] < 10.0){

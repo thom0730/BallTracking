@@ -7,7 +7,7 @@
 #include "drawData.hpp"
 
 #define BALL_NUM 2
-#define SAMPLE_RATE 4
+#define SAMPLE_RATE 5
 #define HOST "127.0.0.1" // IPアドレス
 #define PORT 8000 // ポート番
 
