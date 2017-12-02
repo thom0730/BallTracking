@@ -40,13 +40,15 @@ void ofApp::setup(){
 void ofApp::update(){
     countFrame++;
     
+    
     /*============================
      画面左：bp[0] BALL1 (LEFT = 1)
      画面右：bp[1] BALL2 (RIGHT = 2)
      ============================*/
+    
     //データを受信
     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-    //debug(packet);
+   // debug(packet);
     //IDを整理
     int num = 0;
     if(packet.x < fullHD_x/2){
@@ -70,29 +72,42 @@ void ofApp::update(){
     bp[num] = packet; //配列に受信した構造体を格納
     buffering(bp[num],num); //座標位置をサンプリング用のバッファに格納
     detect(bp[num],num);
+    //detect2(num);
     mainSoundCreate(bp[num],num);
     sendOSC(bp[num], num);
+    
+    
 
     /*
      //遅延する場合
+    int cnt = 0;
+    int num = 0;
      while(1){
-     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-     debug(packet);
+         udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+         debug(packet);
      if(packet.ballId == 0){
-     break;
+         break;
      }
-     ballpacket.push_back(packet);
-     buffering(packet);
+         ballpacket.push_back(packet);
+         //IDを整理
+         if(packet.x < fullHD_x/2){
+             num = LEFT-1;
+         }else{
+             num = RIGHT-1;
+         }
+         buffering(packet,num);
+         cnt++;
      }
-     
-     for(int i = 0 ; i < BALL_NUM ; i ++){
-     detect2(i);
-     mainSoundCreate(i);
-     sendOSC(ballpacket[i], i);
-     }
+    if(num != 0){
+        detect(ballpacket[cnt],num);
+        mainSoundCreate(ballpacket[cnt],num);
+        sendOSC(ballpacket[cnt],num);
+    }
+     */
+
      //初期化
      ballpacket.clear();
-     */
+
 }
 
 //--------------------------------------------------------------
@@ -142,7 +157,8 @@ void ofApp::detect(BallPacket _bp, int _i){
         float x = L_vec.x * Lprev_vec.x;
         float y = L_vec.y * Lprev_vec.y;
          //前フレームの速度ベクトルと現在の速度ベクトルの「積が負」になれば速度ベクトルが逆転していると判定
-        if(y < Threshold && L_vec.y > 0){
+        if(y < Threshold && L_vec.y < 0){
+             cout <<"L_vec.y = " << L_vec.y << " | y = " << y << endl;
             //現在ベクトルのy方向大きさをattackとして出力
             attack[_i] = ABS(L_vec.y);
             
@@ -151,8 +167,12 @@ void ofApp::detect(BallPacket _bp, int _i){
                 attack[_i]  = 0;
             }
             //アタックが小さい場合のアンプ
-            else if(attack[_i] < 10.0){
+            else if(attack[_i] > 1.0 && attack[_i] < 10.0){
                  attack[_i] = 10.0;
+            }
+            //アタックが小さすぎる場合は除去
+            else if(attack[_i] < 1.0){
+                attack[_i] = 0.0;
             }
         }
           Lprev_vec = L_vec; //現在の速度ベクトルを格納
@@ -163,13 +183,16 @@ void ofApp::detect(BallPacket _bp, int _i){
 
 
         if(y < Threshold && R_vec.y < 0){
-             cout <<"R_vec.y = " << R_vec.y << " y = " << y << endl;
+            cout <<"R_vec.y = " << R_vec.y << " | y = " << y << endl;
             attack[_i] = ABS(R_vec.y);
             if(attack[_i] > 200 ){
                 attack[_i]  = 0;
             }
-            else if(attack[_i] < 10.0){
-                 attack[_i] = 10.0;
+            else if(attack[_i] > 1.0 && attack[_i] < 10.0){
+                attack[_i] = 10.0;
+            }
+            else if(attack[_i] < 1.0){
+                attack[_i] = 0.0;
             }
  
         }
