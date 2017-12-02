@@ -39,50 +39,60 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     countFrame++;
-    //UDP受信
-    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-    debug(packet);
-    cout << "1＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
-    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-    debug(packet);
-    cout << "2＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
-    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
-    debug(packet);
-    cout << "3＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝" << endl;
-
+    
     /*============================
      画面左：bp[0] BALL1 (LEFT = 1)
      画面右：bp[1] BALL2 (RIGHT = 2)
      ============================*/
-
-     //IDを整理
-     int number = 0;
-     if(packet.x < fullHD_x/2){
-         number = LEFT-1;
-     }else{
-         number = RIGHT-1;
-     }
-    //(0,0)を受信した時のIDの振り分け
+    //データを受信
+    udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+    //debug(packet);
+    //IDを整理
+    int num = 0;
+    if(packet.x < fullHD_x/2){
+        num = LEFT-1;
+    }else{
+        num = RIGHT-1;
+    }
+    //(0,0)を受信した時のIDの振り分け(左右が順番に送られてくる前提)
     if(packet.ballId == 0){
         switch(buffArrID){
             case 0:
-                number = 1;
+                num = 1;
                 break;
             case 1:
-                number = 0;
+                num = 0;
                 break;
         }
     }
-    buffArrID = number; //前フレームに受けたボールのID
-    //配列に受信した構造体を格納
-    bp[number] = packet;
-    //衝突検出(attackの検出)
-    detect2(number);
-    
-    //noteの割り振り
-    mainSoundCreate(number);
-    //OSC 送信
-    sendOSC(bp[number], number);
+    buffArrID = num; //前フレームに受けたボールのID
+
+    bp[num] = packet; //配列に受信した構造体を格納
+    buffering(bp[num],num); //座標位置をサンプリング用のバッファに格納
+    detect(bp[num],num);
+    mainSoundCreate(bp[num],num);
+    sendOSC(bp[num], num);
+
+    /*
+     //遅延する場合
+     while(1){
+     udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+     debug(packet);
+     if(packet.ballId == 0){
+     break;
+     }
+     ballpacket.push_back(packet);
+     buffering(packet);
+     }
+     
+     for(int i = 0 ; i < BALL_NUM ; i ++){
+     detect2(i);
+     mainSoundCreate(i);
+     sendOSC(ballpacket[i], i);
+     }
+     //初期化
+     ballpacket.clear();
+     */
 }
 
 //--------------------------------------------------------------
@@ -104,7 +114,122 @@ void ofApp::draw(){
 
 }
 //--------------------------------------------------------------
-void ofApp::detect(int _i){
+void ofApp::buffering(BallPacket _bp, int _i){
+    if(_i == (LEFT-1)){
+        for(int i = SAMPLE_RATE-1 ; i > 0 ; i --){
+            Lprev_x[i] = Lprev_x[i-1];
+            Lprev_y[i] = Lprev_y[i-1];
+            Lprev_x[0] = _bp.x;
+            Lprev_y[0] = _bp.y;
+        }
+    }else{
+        for(int i = SAMPLE_RATE-1 ; i > 0 ; i --){
+            Rprev_x[i] = Rprev_x[i-1];
+            Rprev_y[i] = Rprev_y[i-1];
+        }
+        Rprev_x[0] = _bp.x;
+        Rprev_y[0] = _bp.y;
+    }
+
+}
+//--------------------------------------------------------------
+void ofApp::detect(BallPacket _bp, int _i){
+    attack[_i] = 0;
+    if(_i == (LEFT-1)){
+        //SAMPLE_RATEフレーム前の座標位置から現在位置への速度ベクトル
+        L_vec.set(_bp.x - Lprev_x[SAMPLE_RATE-1],_bp.y - Lprev_y[SAMPLE_RATE-1]);
+       
+        float x = L_vec.x * Lprev_vec.x;
+        float y = L_vec.y * Lprev_vec.y;
+         //前フレームの速度ベクトルと現在の速度ベクトルの「積が負」になれば速度ベクトルが逆転していると判定
+        if(y < Threshold && L_vec.y > 0){
+            //現在ベクトルのy方向大きさをattackとして出力
+            attack[_i] = ABS(L_vec.y);
+            
+            //ボールが消えた時のattackの検出を外す
+            if(attack[_i] > 200 ){
+                attack[_i]  = 0;
+            }
+            //アタックが小さい場合のアンプ
+            else if(attack[_i] < 10.0){
+                 attack[_i] = 10.0;
+            }
+        }
+          Lprev_vec = L_vec; //現在の速度ベクトルを格納
+    }else{
+        R_vec.set(_bp.x - Rprev_x[SAMPLE_RATE-1],_bp.y - Rprev_y[SAMPLE_RATE-1]);
+        float x = R_vec.x * Rprev_vec.x;
+        float y = R_vec.y * Rprev_vec.y;
+
+
+        if(y < Threshold && R_vec.y < 0){
+             cout <<"R_vec.y = " << R_vec.y << " y = " << y << endl;
+            attack[_i] = ABS(R_vec.y);
+            if(attack[_i] > 200 ){
+                attack[_i]  = 0;
+            }
+            else if(attack[_i] < 10.0){
+                 attack[_i] = 10.0;
+            }
+ 
+        }
+        Rprev_vec = R_vec;
+    }
+
+}
+//--------------------------------------------------------------
+void ofApp::mainSoundCreate(BallPacket _bp,int _i){
+    //音色分け
+    if(_bp.y < ofGetHeight()/3){
+        note[_i] = 1 * (_i+1);
+    }else if(_bp.y > ofGetHeight()/3 && _bp.y < 2*ofGetHeight()/3){
+        note[_i] = 2 * (_i+1);
+    }else{
+        note[_i] = 3 * (_i+1);
+    }
+}
+//--------------------------------------------------------------
+void ofApp::sendOSC(BallPacket _bp, int _i){
+    //IDを整理(配列とは関係ない)
+    int BallID;
+    if(_bp.x < fullHD_x/2){
+        BallID = LEFT;
+    }else{
+        BallID = RIGHT;
+    }
+    for(int i = 0 ; i < 4 ; i++){
+        //OSCメッセージの準備
+        ofxOscMessage m;
+        string msg = "";
+        switch (i) {
+            case 0:
+                msg += "/Ball" + ofToString(BallID) + "_x";
+                m.setAddress(msg);
+                m.addFloatArg(_bp.x);
+                break;
+            case 1:
+                msg += "/Ball" + ofToString(BallID) + "_y";
+                m.setAddress(msg);
+                m.addFloatArg(_bp.y);
+                break;
+            case 2:
+                msg += "/Ball" + ofToString(BallID) + "_attack";
+                m.setAddress(msg);
+                m.addFloatArg(attack[_i]);
+                break;
+            case 3:
+                msg += "/Ball" + ofToString(BallID) + "_note";
+                m.setAddress(msg);
+                m.addIntArg(note[_i]);
+                break;
+            default:
+                break;
+        }
+        sender.sendMessage(m);
+    }
+}
+//--------------------------------------------------------------
+void ofApp::detect1(int _i){
     attack[_i] = 0;
     
     if(countFrame%SAMPLE_RATE == 0){
@@ -202,46 +327,6 @@ void ofApp::detect3(int _i){
     buffvec[_i] = vec[_i];
 }
 //--------------------------------------------------------------
-void ofApp::sendOSC(BallPacket _bp, int _i){
-    //IDを整理(配列とは関係ない)
-    int BallID;
-    if(_bp.x < fullHD_x/2){
-        BallID = LEFT;
-    }else{
-        BallID = RIGHT;
-    }
-    for(int i = 0 ; i < 4 ; i++){
-        //OSCメッセージの準備
-        ofxOscMessage m;
-        string msg = "";
-        switch (i) {
-            case 0:
-                msg += "/Ball" + ofToString(BallID) + "_x";
-                m.setAddress(msg);
-                m.addFloatArg(_bp.x);
-                break;
-            case 1:
-                msg += "/Ball" + ofToString(BallID) + "_y";
-                m.setAddress(msg);
-                m.addFloatArg(_bp.y);
-                break;
-            case 2:
-                msg += "/Ball" + ofToString(BallID) + "_attack";
-                m.setAddress(msg);
-                m.addFloatArg(attack[_i]);
-                break;
-            case 3:
-                msg += "/Ball" + ofToString(BallID) + "_note";
-                m.setAddress(msg);
-                m.addIntArg(note[_i]);
-                break;
-            default:
-                break;
-        }
-        sender.sendMessage(m);
-    }
-}
-//--------------------------------------------------------------
 void ofApp::trackingDraw(){
 
     ofSetColor(0, 0, 0);
@@ -331,17 +416,8 @@ void ofApp::debug(BallPacket _bp){
     cout <<  "x = " << _bp.x << endl;
     cout <<  "y = " << _bp.y << endl;
 }
-//--------------------------------------------------------------
-void ofApp::mainSoundCreate(int _i){
-    //音色分け
-    if(bp[_i].y < ofGetHeight()/3){
-        note[_i] = 1 * (_i+1);
-    }else if(bp[_i].y > ofGetHeight()/3 &&  bp[_i].y < 2*ofGetHeight()/3){
-        note[_i] = 2 * (_i+1);
-    }else{
-        note[_i] = 3 * (_i+1);
-    }
-}
+
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
