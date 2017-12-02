@@ -1,5 +1,7 @@
 #include "ofApp.h"
 
+using namespace ofxCv;
+using namespace cv;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -28,9 +30,14 @@ void ofApp::setup(){
     //軌跡が残るように
     ofSetBackgroundAuto(false);
     
-    //BPMを秒に直す
-    BPM = (60/BPM)*4*10;
-    
+    //カルマンフィルタの初期化
+    for(int i = 0 ; i < BALL_NUM ; i ++ ){
+        kalman[i].init(1/10000., 1/10.); // inverse of (smoothness, rapidness)
+        line[i].setMode(OF_PRIMITIVE_LINE_STRIP);
+        predicted[i].setMode(OF_PRIMITIVE_LINE_STRIP);
+        estimated[i].setMode(OF_PRIMITIVE_LINE_STRIP);
+    }
+
     //初期のNoteを定義
     for(int i = 0  ; i < BALL_NUM ; i++){
         note[i] = i+1;
@@ -82,7 +89,6 @@ void ofApp::update(){
 
     
      //遅延する場合
-    int cnt = 0;
     int num = 0;
     //attackの初期化
     for(int i = 0 ; i < BALL_NUM ; i++){
@@ -93,7 +99,7 @@ void ofApp::update(){
      if(packet.ballId == 0){
          break;
      }
-         debug(packet);
+         //debug(packet);
          ballpacket.push_back(packet);
          //IDを整理
          if(packet.x < fullHD_x/2){
@@ -113,6 +119,31 @@ void ofApp::update(){
              }
          }
          buffArrID = num;//1パケット前に受けたボールのID
+         
+          /*======　カルマンフィルタ　======*/
+         ofVec2f curPoint(packet.x, packet.y);
+         ofVec2f Mpos(ofMap(curPoint.x,0,fullHD_x,0,ofGetWidth()), ofMap(curPoint.y,0,fullHD_y,0,ofGetHeight()));
+         line[num].addVertex(Mpos);
+         kalman[num].update(curPoint); // feed measurement カルマンフィルタに投げる
+         // prediction before measurement 前の時刻の情報から推定した位置
+         pre_pos[num] = kalman[num].getPrediction();
+         ofVec2f Mpre_pos(ofMap(pre_pos[num].x,0,fullHD_x,0,ofGetWidth()), ofMap(pre_pos[num].y,0,fullHD_y,0,ofGetHeight()));
+         predicted[num].addVertex(Mpre_pos);
+         // corrected estimation after measurement 現在観測した情報に基づき新たに推定した位置
+         est_pos[num] = kalman[num].getEstimation();
+         cout <<"num = " << num <<endl;
+         cout<< "now = " << curPoint << endl;
+         cout << "future = " << est_pos[num] <<endl;
+         ofVec2f Mest_pos(ofMap(est_pos[num].x,0,fullHD_x,0,ofGetWidth()), ofMap(est_pos[num].y,0,fullHD_y,0,ofGetHeight()));
+         estimated[num].addVertex(Mest_pos);
+         //移動速度
+         speed[num] = kalman[num].getVelocity().length();
+         int alpha = ofMap(speed[num], 0, 20, 50, 255, true);
+         line[num].addColor(ofColor(255, 255, 255, alpha));
+         predicted[num].addColor(ofColor(255, 0, 0, alpha)); //赤線：前の時刻の情報から推定した位置
+         estimated[num].addColor(ofColor(0, 255, 0, alpha)); //緑線：現在観測した情報に基づき新たに推定した位置
+          /*======　カルマンフィルタ　======*/
+
          bp[num] = packet;
          buffering(bp[num] ,num); //左右それぞれの座標位置をバッファに格納
          detect(bp[num] ,num);
@@ -137,6 +168,21 @@ void ofApp::draw(){
     
     //Y-T展開
     //graphDraw();
+    
+    //カルマンフィルタの結果を描画
+    for(int i = 0 ; i < BALL_NUM ; i++){
+        line[i].draw();
+        predicted[i].draw(); //メッシュ描画
+        ofPushStyle();
+        ofSetColor(0, 0, 255, 5 );
+        ofFill();
+        ofVec2f Mpre_pos(ofMap(pre_pos[i].x,0,fullHD_x,0,ofGetWidth()), ofMap(pre_pos[i].y,0,fullHD_y,0,ofGetHeight()));
+        ofDrawCircle(Mpre_pos, speed[i] * 2);
+        ofPopStyle();
+        
+        estimated[i].draw();
+
+    }
 
     //方眼紙
     drawdata.drawGrid();
@@ -359,6 +405,13 @@ void ofApp::debug(BallPacket _bp){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
+    //MARKER FOR DEBUG
+    if(key == 'v'){
+        cout << "GOOD" << endl;
+    }
+    if(key == 'b'){
+        cout << "BAD" << endl;
+    }
     
 }
 //--------------------------------------------------------------

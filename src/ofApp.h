@@ -5,6 +5,7 @@
 #include "ofxOsc.h"
 #include "ofxGui.h"
 #include "drawData.hpp"
+#include "ofxCv.h"
 
 #define BALL_NUM 2
 #define SAMPLE_RATE 2
@@ -56,13 +57,11 @@ class ofApp : public ofBaseApp{
     void graphDraw();
     int countFrame;
 
-
-
     //FOR PRESET
     int fullHD_x = 1920;
     int fullHD_y = 1080;
-    float BPM = 100.0;
 
+    //FOR RECEIVE UDP
     ofxUDPManager udpConnect;
     float mx,my;
     bool isBind = true;
@@ -79,17 +78,19 @@ class ofApp : public ofBaseApp{
     float attack[BALL_NUM]; //Attackデータ
     int note[BALL_NUM]; // 音色データ
     
+    //FOR KALMAN FILTER
+    ofxCv::KalmanPosition kalman[BALL_NUM];
+    ofVec2f pre_pos[BALL_NUM],est_pos[BALL_NUM];
+    ofMesh predicted[BALL_NUM], line[BALL_NUM], estimated[BALL_NUM];
+    float speed[BALL_NUM];
     
     
- 
-    
-    
-    
-    //GUI
+
+    //FOR GUI
     ofxPanel gui;
     ofxFloatSlider Threshold;
     ofxFloatSlider DetectMIN;
-    //OSCメッセージの送信者
+    //FOR OSC
     ofxOscSender sender;
     
     drawData drawdata;
