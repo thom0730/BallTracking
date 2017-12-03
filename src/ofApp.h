@@ -90,6 +90,7 @@ class ofApp : public ofBaseApp{
     ofxPanel gui;
     ofxFloatSlider Threshold;
     ofxFloatSlider DetectMIN;
+    ofxFloatSlider DetectMAX;
     //FOR OSC
     ofxOscSender sender;
     

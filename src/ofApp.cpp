@@ -21,8 +21,9 @@ void ofApp::setup(){
     
     //GUI set up
     gui.setup();
-    gui.add(Threshold.setup("Threshold", -1, -5, 0));
-    gui.add(DetectMIN.setup("Min Attack", 1.0, 0, 2.0));
+    gui.add(Threshold.setup("Detect Threshold", -1, -5, 0));
+    gui.add(DetectMAX.setup("MAX Attack", 200, 150, 400));
+    gui.add(DetectMIN.setup("MIN Attack", 1.0, 0, 2.0));
     
     // OSC set up
     sender.setup(HOST, PORT);
@@ -34,8 +35,8 @@ void ofApp::setup(){
     for(int i = 0 ; i < BALL_NUM ; i ++ ){
         kalman[i].init(1/10000., 1/10.); // inverse of (smoothness, rapidness)
         line[i].setMode(OF_PRIMITIVE_LINE_STRIP);
-        predicted[i].setMode(OF_PRIMITIVE_LINE_STRIP);
-        estimated[i].setMode(OF_PRIMITIVE_LINE_STRIP);
+        predicted[i].setMode(OF_PRIMITIVE_POINTS);
+        estimated[i].setMode(OF_PRIMITIVE_POINTS);
     }
 
     //初期のNoteを定義
@@ -139,14 +140,15 @@ void ofApp::update(){
          //移動速度
          speed[num] = kalman[num].getVelocity().length();
          int alpha = ofMap(speed[num], 0, 20, 50, 255, true);
-         line[num].addColor(ofColor(255, 255, 255, alpha));
-         predicted[num].addColor(ofColor(255, 0, 0, alpha)); //赤線：前の時刻の情報から推定した位置
-         estimated[num].addColor(ofColor(0, 255, 0, alpha)); //緑線：現在観測した情報に基づき新たに推定した位置
+         line[num].addColor(ofColor(255, 255, 255, 10));
+         predicted[num].addColor(ofFloatColor(0.5, 0.8, 1, alpha)); //赤線：前の時刻の情報から推定した位置
+         estimated[num].addColor(ofColor(255, 155, 255, alpha)); //緑線：現在観測した情報に基づき新たに推定した位置
           /*======　カルマンフィルタ　======*/
 
          bp[num] = packet;
          buffering(bp[num] ,num); //左右それぞれの座標位置をバッファに格納
          detect(bp[num] ,num);
+         mainSoundCreate(bp[num],num);
      }
     //OSC送信
     for(int i = 0 ; i < BALL_NUM ; i++){
@@ -177,7 +179,7 @@ void ofApp::draw(){
         ofSetColor(0, 0, 255, 5 );
         ofFill();
         ofVec2f Mpre_pos(ofMap(pre_pos[i].x,0,fullHD_x,0,ofGetWidth()), ofMap(pre_pos[i].y,0,fullHD_y,0,ofGetHeight()));
-        ofDrawCircle(Mpre_pos, speed[i] * 2);
+       // ofDrawCircle(Mpre_pos, speed[i] * 2);
         ofPopStyle();
         
         estimated[i].draw();
@@ -225,7 +227,7 @@ void ofApp::detect(BallPacket _bp, int _i){
             attack[_i] = ABS(L_vec.y);
             
             //ボールが消えた時のattackの検出を外す
-            if(attack[_i] > 200){
+            if(attack[_i] > DetectMAX){
                 attack[_i]  = 0;
             }
             //アタックが小さい場合のアンプ
@@ -247,7 +249,7 @@ void ofApp::detect(BallPacket _bp, int _i){
         if(y < Threshold && R_vec.y < 0){
             cout <<"R_vec.y = " << R_vec.y << " | y = " << y << endl;
             attack[_i] = ABS(R_vec.y);
-            if(attack[_i] > 200 ){
+            if(attack[_i] > DetectMAX ){
                 attack[_i]  = 0;
             }
             else if(attack[_i] > DetectMIN && attack[_i] < 10.0){
