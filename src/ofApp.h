@@ -8,6 +8,7 @@
 #include "ofxCv.h"
 
 #define BALL_NUM 2
+//リアルタイム：SAMPLE_RATE = 4 | 録画：SAMPLE_RATE = 2
 #define SAMPLE_RATE 2
 #define HOST "127.0.0.1" // IPアドレス
 #define PORT 8000 // ポート番
@@ -32,19 +33,8 @@ class ofApp : public ofBaseApp{
 		void update();
 		void draw();
         void exit();
-    
 		void keyPressed(int key);
-		void keyReleased(int key);
-		void mouseMoved(int x, int y );
-		void mouseDragged(int x, int y, int button);
-		void mousePressed(int x, int y, int button);
-		void mouseReleased(int x, int y, int button);
-		void mouseEntered(int x, int y);
-		void mouseExited(int x, int y);
-		void windowResized(int w, int h);
-		void dragEvent(ofDragInfo dragInfo);
-		void gotMessage(ofMessage msg);
-    
+
     //CORE
     void buffering(BallPacket _bp, int _i);
     void detect(BallPacket _bp, int _i);
@@ -69,7 +59,6 @@ class ofApp : public ofBaseApp{
     //FOR PROCESSING
     BallPacket packet; //受信用
     BallPacket bp[BALL_NUM];
-    vector<BallPacket> ballpacket; //受信用(遅延する場合)
     float Lprev_x[SAMPLE_RATE] , Lprev_y[SAMPLE_RATE];
     float Rprev_x[SAMPLE_RATE] , Rprev_y[SAMPLE_RATE];
     ofVec2f Lprev_vec, Rprev_vec; //1フレーム前の速度ベクトル
@@ -83,8 +72,6 @@ class ofApp : public ofBaseApp{
     ofVec2f pre_pos[BALL_NUM],est_pos[BALL_NUM];
     ofMesh predicted[BALL_NUM], line[BALL_NUM], estimated[BALL_NUM];
     float speed[BALL_NUM];
-    
-    
 
     //FOR GUI
     ofxPanel gui;
@@ -93,6 +80,10 @@ class ofApp : public ofBaseApp{
     ofxFloatSlider DetectMAX;
     //FOR OSC
     ofxOscSender sender;
+    
+    //FOR TIMELINE
+    void introFLG();
+    bool flg = false;
     
     drawData drawdata;
     

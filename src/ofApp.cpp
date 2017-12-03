@@ -5,7 +5,7 @@ using namespace cv;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    //ofSetWindowShape(400, 400);
+    ofSetWindowShape(800, 600);
     ofBackground(0, 0, 0);
     ofSetVerticalSync(true);
     ofSetFrameRate(60);
@@ -23,7 +23,7 @@ void ofApp::setup(){
     gui.setup();
     gui.add(Threshold.setup("Detect Threshold", -1, -5, 0));
     gui.add(DetectMAX.setup("MAX Attack", 200, 150, 400));
-    gui.add(DetectMIN.setup("MIN Attack", 1.0, 0, 2.0));
+    gui.add(DetectMIN.setup("MIN Attack", 1.0, 0, 10.0));
     
     // OSC set up
     sender.setup(HOST, PORT);
@@ -78,6 +78,29 @@ void ofApp::update(){
         }
     }
     buffArrID = num; //前フレームに受けたボールのID
+    //======　カルマンフィルタ　======
+    ofVec2f curPoint(packet.x, packet.y);
+    ofVec2f Mpos(ofMap(curPoint.x,0,fullHD_x,0,ofGetWidth()), ofMap(curPoint.y,0,fullHD_y,0,ofGetHeight()));
+    line[num].addVertex(Mpos);
+    kalman[num].update(curPoint); // feed measurement カルマンフィルタに投げる
+    // prediction before measurement 前の時刻の情報から推定した位置
+    pre_pos[num] = kalman[num].getPrediction();
+    ofVec2f Mpre_pos(ofMap(pre_pos[num].x,0,fullHD_x,0,ofGetWidth()), ofMap(pre_pos[num].y,0,fullHD_y,0,ofGetHeight()));
+    predicted[num].addVertex(Mpre_pos);
+    // corrected estimation after measurement 現在観測した情報に基づき新たに推定した位置
+    est_pos[num] = kalman[num].getEstimation();
+    cout <<"num = " << num <<endl;
+    cout<< "now = " << curPoint << endl;
+    cout << "future = " << est_pos[num] <<endl;
+    ofVec2f Mest_pos(ofMap(est_pos[num].x,0,fullHD_x,0,ofGetWidth()), ofMap(est_pos[num].y,0,fullHD_y,0,ofGetHeight()));
+    estimated[num].addVertex(Mest_pos);
+    //移動速度
+    speed[num] = kalman[num].getVelocity().length();
+    int alpha = ofMap(speed[num], 0, 20, 50, 255, true);
+    line[num].addColor(ofColor(255, 255, 255, 10));
+    predicted[num].addColor(ofFloatColor(0.5, 0.8, 1, alpha)); //青線：前の時刻の情報から推定した位置
+    estimated[num].addColor(ofColor(255, 155, 255, alpha)); //ピンク線：現在観測した情報に基づき新たに推定した位置
+    //======　カルマンフィルタ　======
     bp[num] = packet; //配列に受信した構造体を格納
     buffering(bp[num],num); //座標位置をサンプリング用のバッファに格納
     attack[num] = 0; // 衝突判定の前に毎度Attackを初期化
@@ -97,11 +120,13 @@ void ofApp::update(){
     }
      while(1){
          udpConnect.Receive((char*)&packet,(int)sizeof(packet));
+         //TIMELINE
+
      if(packet.ballId == 0){
          break;
      }
-         //debug(packet);
-         ballpacket.push_back(packet);
+         debug(packet);
+      //   ballpacket.push_back(packet);
          //IDを整理
          if(packet.x < fullHD_x/2){
              num = LEFT-1;
@@ -110,6 +135,8 @@ void ofApp::update(){
          }
          //(0,0)を受信した時のIDの振り分け(左右が順番に送られてくる前提)
          if(packet.x == 0){
+             //始めの(0,0)のときは、OSCで「0」を送信
+             introFLG();
              switch(buffArrID){
                  case 0:
                      num = 1;
@@ -121,7 +148,7 @@ void ofApp::update(){
          }
          buffArrID = num;//1パケット前に受けたボールのID
          
-          /*======　カルマンフィルタ　======*/
+          //======　カルマンフィルタ　======
          ofVec2f curPoint(packet.x, packet.y);
          ofVec2f Mpos(ofMap(curPoint.x,0,fullHD_x,0,ofGetWidth()), ofMap(curPoint.y,0,fullHD_y,0,ofGetHeight()));
          line[num].addVertex(Mpos);
@@ -132,9 +159,9 @@ void ofApp::update(){
          predicted[num].addVertex(Mpre_pos);
          // corrected estimation after measurement 現在観測した情報に基づき新たに推定した位置
          est_pos[num] = kalman[num].getEstimation();
-         cout <<"num = " << num <<endl;
-         cout<< "now = " << curPoint << endl;
-         cout << "future = " << est_pos[num] <<endl;
+      //   cout <<"num = " << num <<endl;
+      //   cout<< "now = " << curPoint << endl;
+       //  cout << "future = " << est_pos[num] <<endl;
          ofVec2f Mest_pos(ofMap(est_pos[num].x,0,fullHD_x,0,ofGetWidth()), ofMap(est_pos[num].y,0,fullHD_y,0,ofGetHeight()));
          estimated[num].addVertex(Mest_pos);
          //移動速度
@@ -143,7 +170,7 @@ void ofApp::update(){
          line[num].addColor(ofColor(255, 255, 255, 10));
          predicted[num].addColor(ofFloatColor(0.5, 0.8, 1, alpha)); //赤線：前の時刻の情報から推定した位置
          estimated[num].addColor(ofColor(255, 155, 255, alpha)); //緑線：現在観測した情報に基づき新たに推定した位置
-          /*======　カルマンフィルタ　======*/
+        //======　カルマンフィルタ　======
 
          bp[num] = packet;
          buffering(bp[num] ,num); //左右それぞれの座標位置をバッファに格納
@@ -156,15 +183,14 @@ void ofApp::update(){
     }
     
      //初期化
-     ballpacket.clear();
+    // ballpacket.clear();
 
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    ofSetColor(0, 0, 0, 5);
-    
     //X-Y展開
+    ofSetColor(0, 0, 0, 20);
     ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
     trackingDraw();
     
@@ -185,7 +211,6 @@ void ofApp::draw(){
         estimated[i].draw();
 
     }
-
     //方眼紙
     drawdata.drawGrid();
     // GUIを表示
@@ -303,6 +328,9 @@ void ofApp::sendOSC(BallPacket _bp, int _i){
                 msg += "/Ball" + ofToString(BallID) + "_attack";
                 m.setAddress(msg);
                 m.addFloatArg(attack[_i]);
+                if(attack[_i] != 0){
+                    cout << "OSC = " << attack[_i] << endl;
+                }
                 break;
             case 3:
                 msg += "/Ball" + ofToString(BallID) + "_note";
@@ -389,24 +417,29 @@ void ofApp::graphDraw(){
     //FPSの表示
     ofSetColor(255, 255, 255);
     ofDrawBitmapString(ofToString(ofGetFrameRate())+ "fps" , ofGetWidth() - 100, 20);
-
 }
-
 //--------------------------------------------------------------
-void ofApp::debug(BallPacket _bp){
-    cout <<  "header = " << _bp.header << endl;
-    cout <<  "index = " << _bp.index << endl;
-    cout <<  "ballId = " << _bp.ballId << endl;
-    cout <<  "flag = " << _bp.flag << endl;
-    cout <<  "timestamp = " << _bp.timestamp << endl;
-    cout <<  "x = " << _bp.x << endl;
-    cout <<  "y = " << _bp.y << endl;
+void ofApp::introFLG(){
+    
+    if (!flg){
+        ofxOscMessage m;
+        string msg = "";
+        msg += "/Introduction";
+        m.setAddress(msg);
+        m.addIntArg(0);
+        sender.sendMessage(m);
+        cout <<" ____SEND 0____ "<< endl;
+        flg = true;
+    }
+    
 }
-
-
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
+    if(key == ' ' ){
+        introFLG();
+    }
+    
     //MARKER FOR DEBUG
     if(key == 'v'){
         cout << "GOOD" << endl;
@@ -417,53 +450,14 @@ void ofApp::keyPressed(int key){
     
 }
 //--------------------------------------------------------------
-void ofApp::keyReleased(int key){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mouseMoved(int x, int y ){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mouseDragged(int x, int y, int button){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mousePressed(int x, int y, int button){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mouseReleased(int x, int y, int button){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mouseEntered(int x, int y){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::mouseExited(int x, int y){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::windowResized(int w, int h){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::gotMessage(ofMessage msg){
-
-}
-
-//--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo){ 
-
+void ofApp::debug(BallPacket _bp){
+    cout <<  "header = " << _bp.header << endl;
+    cout <<  "index = " << _bp.index << endl;
+    cout <<  "ballId = " << _bp.ballId << endl;
+    cout <<  "flag = " << _bp.flag << endl;
+    cout <<  "timestamp = " << _bp.timestamp << endl;
+    cout <<  "x = " << _bp.x << endl;
+    cout <<  "y = " << _bp.y << endl;
 }
 //--------------------------------------------------------------
 void ofApp::exit(){
