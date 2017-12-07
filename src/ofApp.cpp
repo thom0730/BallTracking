@@ -127,7 +127,7 @@ void ofApp::update(){
      if(packet.ballId == 0){
          break;
      }
-         debug(packet);
+       //  debug(packet);
       //   ballpacket.push_back(packet);
          //IDを整理
          if(packet.x < fullHD_x/2){
@@ -222,9 +222,9 @@ void ofApp::buffering(BallPacket _bp, int _i){
         for(int i = SampleRate-1 ; i > 0 ; i --){
             Lprev_x[i] = Lprev_x[i-1];
             Lprev_y[i] = Lprev_y[i-1];
-            Lprev_x[0] = _bp.x;
-            Lprev_y[0] = _bp.y;
         }
+        Lprev_x[0] = _bp.x;
+        Lprev_y[0] = _bp.y;
     }else{
         for(int i = SampleRate-1 ; i > 0 ; i --){
             Rprev_x[i] = Rprev_x[i-1];
@@ -245,8 +245,8 @@ void ofApp::detect(BallPacket _bp, int _i){
         float y = L_vec.y * Lprev_vec.y;
          //前フレームの速度ベクトルと現在の速度ベクトルの「積が負」になれば速度ベクトルが逆転していると判定
         if(y < Threshold && L_vec.y < 0){
-             cout <<"L_vec.y = " << L_vec.y << " | y = " << y << endl;
-            //現在ベクトルのy方向大きさをattackとして出力
+             cout <<"L(速度ベクトル大きさ) = " << L_vec.y << " | y(速度ベクトル積) = " << y << endl;
+            //現在ベクトルのy方向速度ベクトルの大きさをattackとして出力
             attack[_i] = ABS(L_vec.y);
             
             //ボールが消えた時のattackの検出を外す
@@ -270,7 +270,7 @@ void ofApp::detect(BallPacket _bp, int _i){
 
 
         if(y < Threshold && R_vec.y < 0){
-            cout <<"R_vec.y = " << R_vec.y << " | y = " << y << endl;
+            cout <<"R(速度ベクトル大きさ)= " << R_vec.y << " | y(速度ベクトル積) = " << y << endl;
             attack[_i] = ABS(R_vec.y);
             if(attack[_i] > DetectMAX ){
                 attack[_i]  = 0;
@@ -279,7 +279,7 @@ void ofApp::detect(BallPacket _bp, int _i){
                 attack[_i] = 10.0;
             }
             else if(attack[_i] < DetectMIN){
-                attack[_i] = 0.0;
+             //   attack[_i] = 0.0;
             }
  
         }
@@ -449,7 +449,7 @@ void ofApp::keyPressed(int key){
     
     
     //MARKER FOR DEBUG
-    if(key == 'v'){
+    if(key == 'g'){
         cout << "GOOD" << endl;
     }
     if(key == 'b'){
