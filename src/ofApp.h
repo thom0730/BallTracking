@@ -78,6 +78,12 @@ class ofApp : public ofBaseApp{
     ofxFloatSlider Threshold;
     ofxFloatSlider DetectMIN;
     ofxFloatSlider DetectMAX;
+    ofxIntSlider SampleRate;
+    float initThres = -1.0;
+    float initMax = 200.0;
+    float initMin = 1.0;
+    int initSample = 4;
+    
     //FOR OSC
     ofxOscSender sender;
     

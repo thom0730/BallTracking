@@ -21,9 +21,11 @@ void ofApp::setup(){
     
     //GUI set up
     gui.setup();
-    gui.add(Threshold.setup("Detect Threshold", -1, -5, 0));
-    gui.add(DetectMAX.setup("MAX Attack", 200, 150, 400));
-    gui.add(DetectMIN.setup("MIN Attack", 1.0, 0, 10.0));
+    gui.add(Threshold.setup("Threshold", initThres, -5, 0));
+    gui.add(DetectMAX.setup("MaxAttack", initMax, 150, 400));
+    gui.add(DetectMIN.setup("MinAttack", initMin, 0, 10.0));
+    gui.add(SampleRate.setup("SamplingRate", initSample, 1, 6));
+    gui.loadFromFile("settings.xml");
     
     // OSC set up
     sender.setup(HOST, PORT);
@@ -181,10 +183,6 @@ void ofApp::update(){
     for(int i = 0 ; i < BALL_NUM ; i++){
         sendOSC(bp[i],i);
     }
-    
-     //初期化
-    // ballpacket.clear();
-
 }
 
 //--------------------------------------------------------------
@@ -221,14 +219,14 @@ void ofApp::draw(){
 //--------------------------------------------------------------
 void ofApp::buffering(BallPacket _bp, int _i){
     if(_i == (LEFT-1)){
-        for(int i = SAMPLE_RATE-1 ; i > 0 ; i --){
+        for(int i = SampleRate-1 ; i > 0 ; i --){
             Lprev_x[i] = Lprev_x[i-1];
             Lprev_y[i] = Lprev_y[i-1];
             Lprev_x[0] = _bp.x;
             Lprev_y[0] = _bp.y;
         }
     }else{
-        for(int i = SAMPLE_RATE-1 ; i > 0 ; i --){
+        for(int i = SampleRate-1 ; i > 0 ; i --){
             Rprev_x[i] = Rprev_x[i-1];
             Rprev_y[i] = Rprev_y[i-1];
         }
@@ -241,7 +239,7 @@ void ofApp::buffering(BallPacket _bp, int _i){
 void ofApp::detect(BallPacket _bp, int _i){
     if(_i == (LEFT-1)){
         //SAMPLE_RATEフレーム前の座標位置から現在位置への速度ベクトル
-        L_vec.set(_bp.x - Lprev_x[SAMPLE_RATE-1],_bp.y - Lprev_y[SAMPLE_RATE-1]);
+        L_vec.set(_bp.x - Lprev_x[SampleRate-1],_bp.y - Lprev_y[SampleRate-1]);
        
         float x = L_vec.x * Lprev_vec.x;
         float y = L_vec.y * Lprev_vec.y;
@@ -266,7 +264,7 @@ void ofApp::detect(BallPacket _bp, int _i){
         }
           Lprev_vec = L_vec; //現在の速度ベクトルを格納
     }else{
-        R_vec.set(_bp.x - Rprev_x[SAMPLE_RATE-1],_bp.y - Rprev_y[SAMPLE_RATE-1]);
+        R_vec.set(_bp.x - Rprev_x[SampleRate-1],_bp.y - Rprev_y[SampleRate-1]);
         float x = R_vec.x * Rprev_vec.x;
         float y = R_vec.y * Rprev_vec.y;
 
@@ -436,9 +434,19 @@ void ofApp::introFLG(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
+    //強制的にイントロを開始
     if(key == ' ' ){
         introFLG();
     }
+    
+    //パラメータの初期化
+    if(key == 'r' ){
+        Threshold = initThres;
+        DetectMAX = initMax;
+        DetectMIN = initMin;
+        SampleRate = initSample;
+    }
+    
     
     //MARKER FOR DEBUG
     if(key == 'v'){
@@ -462,4 +470,5 @@ void ofApp::debug(BallPacket _bp){
 //--------------------------------------------------------------
 void ofApp::exit(){
     if(isBind) udpConnect.Close();
+    gui.saveToFile("settings.xml");
 }
