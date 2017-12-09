@@ -10,7 +10,8 @@
 #define BALL_NUM 2
 //リアルタイム：SAMPLE_RATE = 4 | 録画：SAMPLE_RATE = 2
 #define SAMPLE_RATE 2
-#define HOST "127.0.0.1" // IPアドレス
+//For Send OSC
+#define HOST "10.0.1.111" // IPアドレス
 #define PORT 8000 // ポート番
 
 //ボール番号の割り振り
@@ -63,6 +64,7 @@ class ofApp : public ofBaseApp{
     float Rprev_x[SAMPLE_RATE] , Rprev_y[SAMPLE_RATE];
     ofVec2f Lprev_vec, Rprev_vec; //1フレーム前の速度ベクトル
     ofVec2f L_vec, R_vec; //現在の速度ベクトル
+    float multL , multR; //速度ベクトルの積
     int buffArrID; //ボールが消えたときのIDの整理用
     float attack[BALL_NUM]; //Attackデータ
     int note[BALL_NUM]; // 音色データ

@@ -1,7 +1,7 @@
 <group>
-	<Threshold>-1</Threshold>
-	<MaxAttack>200</MaxAttack>
-	<MinAttack>1</MinAttack>
-	<SamplingRate>2</SamplingRate>
+	<Threshold>-0.55</Threshold>
+	<MaxAttack>301.25</MaxAttack>
+	<MinAttack>0.6</MinAttack>
+	<SamplingRate>3</SamplingRate>
 <group/>
 </group>

@@ -23,7 +23,7 @@ void ofApp::setup(){
     gui.setup();
     gui.add(Threshold.setup("Threshold", initThres, -5, 0));
     gui.add(DetectMAX.setup("MaxAttack", initMax, 150, 400));
-    gui.add(DetectMIN.setup("MinAttack", initMin, 0, 10.0));
+    gui.add(DetectMIN.setup("MinAttack", initMin, 0, 3.0));
     gui.add(SampleRate.setup("SamplingRate", initSample, 1, 6));
     gui.loadFromFile("settings.xml");
     
@@ -196,6 +196,7 @@ void ofApp::draw(){
     //graphDraw();
     
     //カルマンフィルタの結果を描画
+    /*
     for(int i = 0 ; i < BALL_NUM ; i++){
         line[i].draw();
         predicted[i].draw(); //メッシュ描画
@@ -209,6 +210,7 @@ void ofApp::draw(){
         estimated[i].draw();
 
     }
+     */
     //方眼紙
     drawdata.drawGrid();
     // GUIを表示
@@ -245,7 +247,7 @@ void ofApp::detect(BallPacket _bp, int _i){
         float y = L_vec.y * Lprev_vec.y;
          //前フレームの速度ベクトルと現在の速度ベクトルの「積が負」になれば速度ベクトルが逆転していると判定
         if(y < Threshold && L_vec.y < 0){
-             cout <<"L(速度ベクトル大きさ) = " << L_vec.y << " | y(速度ベクトル積) = " << y << endl;
+            // cout <<"L(速度ベクトル大きさ) = " << L_vec.y << " | y(速度ベクトル積) = " << y << endl;
             //現在ベクトルのy方向速度ベクトルの大きさをattackとして出力
             attack[_i] = ABS(L_vec.y);
             
@@ -255,6 +257,8 @@ void ofApp::detect(BallPacket _bp, int _i){
             }
             //アタックが小さい場合のアンプ
             else if(attack[_i] > DetectMIN && attack[_i] < 10.0){
+                 cout << " == " << endl;
+                cout << "Orign L = " << attack[_i] << endl;
                  attack[_i] = 10.0;
             }
             //アタックが小さすぎる場合は除去
@@ -270,16 +274,18 @@ void ofApp::detect(BallPacket _bp, int _i){
 
 
         if(y < Threshold && R_vec.y < 0){
-            cout <<"R(速度ベクトル大きさ)= " << R_vec.y << " | y(速度ベクトル積) = " << y << endl;
+            //cout <<"R(速度ベクトル大きさ)= " << R_vec.y << " | y(速度ベクトル積) = " << y << endl;
             attack[_i] = ABS(R_vec.y);
             if(attack[_i] > DetectMAX ){
                 attack[_i]  = 0;
             }
             else if(attack[_i] > DetectMIN && attack[_i] < 10.0){
+                cout << " == " << endl;
+                 cout << "Orign R = " << attack[_i] << endl;
                 attack[_i] = 10.0;
             }
             else if(attack[_i] < DetectMIN){
-             //   attack[_i] = 0.0;
+                attack[_i] = 0.0;
             }
  
         }
@@ -358,15 +364,19 @@ void ofApp::trackingDraw(){
         ofDrawBitmapString( "y = " + ofToString(y) , (i+1)*300, 60);
         ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (i+1)*300, 80);
         ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1)*300, 100);
-
+        
         //ball
         int j = 0;
         if(attack[i] != 0){
+            //アタックの際のボールの拡大
             j = 10;
+            //Ballに出るログ
+            ofDrawBitmapString(ofToString(attack[i]) , x+20, y-20);
         }
          ofSetColor(i*100 + j, 100*(i+1), 155 + j);
       //  ofDrawBitmapString( "ID = " + ofToString(i), x+5,y+5);
         ofDrawCircle(x,y, 3 + j);
+        
         
         //目盛
         for(int i = 0 ; i < ofGetHeight() ; i ++){
@@ -440,7 +450,7 @@ void ofApp::keyPressed(int key){
     }
     
     //パラメータの初期化
-    if(key == 'r' ){
+    if(key == 'i' ){
         Threshold = initThres;
         DetectMAX = initMax;
         DetectMIN = initMin;
@@ -454,6 +464,12 @@ void ofApp::keyPressed(int key){
     }
     if(key == 'b'){
         cout << "BAD" << endl;
+    }
+    if(key == 'a'){
+        cout << "Left：" << ABS(L_vec.y)<< endl;
+    }
+    if(key == 'l'){
+        cout << "Right：" << ABS(R_vec.y)<< endl;
     }
     
 }
