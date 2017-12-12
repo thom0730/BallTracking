@@ -449,13 +449,21 @@ void ofApp::keyPressed(int key){
         introFLG();
     }
     
-    //パラメータの初期化
-    if(key == 'i' ){
+    //パラメータの初期化(ボール2つ)
+    if(key == '2' ){
+        Threshold = initThres;
+        DetectMAX = initMax;
+        DetectMIN = initMin;
+        SampleRate = 2;
+    }
+    //パラメータの初期化(ボール1つ)
+    if(key == '1' ){
         Threshold = initThres;
         DetectMAX = initMax;
         DetectMIN = initMin;
         SampleRate = initSample;
     }
+    
     
     
     //MARKER FOR DEBUG

@@ -10,8 +10,10 @@
 #define BALL_NUM 2
 //リアルタイム：SAMPLE_RATE = 4 | 録画：SAMPLE_RATE = 2
 #define SAMPLE_RATE 2
+
 //For Send OSC
-#define HOST "10.0.1.111" // IPアドレス
+ //#define HOST "10.0.1.111" // IPアドレ
+#define HOST "127.0.0.1" // IPアドレス(ローカルの場合)
 #define PORT 8000 // ポート番
 
 //ボール番号の割り振り
