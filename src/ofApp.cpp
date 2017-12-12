@@ -429,7 +429,7 @@ void ofApp::graphDraw(){
 //--------------------------------------------------------------
 void ofApp::introFLG(){
     
-    if (!flg){
+   // if (!flg){
         ofxOscMessage m;
         string msg = "";
         msg += "/Introduction";
@@ -437,8 +437,8 @@ void ofApp::introFLG(){
         m.addIntArg(0);
         sender.sendMessage(m);
         cout <<" ____SEND 0____ "<< endl;
-        flg = true;
-    }
+     //   flg = true;
+  //  }
     
 }
 //--------------------------------------------------------------
