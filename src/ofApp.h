@@ -12,8 +12,8 @@
 #define SAMPLE_RATE 2
 
 //For Send OSC
- //#define HOST "10.0.1.111" // IPアドレ
-#define HOST "127.0.0.1" // IPアドレス(ローカルの場合)
+#define HOST "10.0.1.111" // IPアドレス
+//#define HOST "127.0.0.1" // IPアドレス(ローカルの場合)
 #define PORT 8000 // ポート番
 
 //ボール番号の割り振り
@@ -85,7 +85,7 @@ class ofApp : public ofBaseApp{
     ofxIntSlider SampleRate;
     float initThres = -1.0;
     float initMax = 200.0;
-    float initMin = 1.0;
+    float initMin = 0.8;
     int initSample = 4;
     
     //FOR OSC

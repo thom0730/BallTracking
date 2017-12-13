@@ -5,7 +5,7 @@ using namespace cv;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    ofSetWindowShape(800, 600);
+    ofSetWindowShape(700, 500);
     ofBackground(0, 0, 0);
     ofSetVerticalSync(true);
     ofSetFrameRate(60);
@@ -359,11 +359,11 @@ void ofApp::trackingDraw(){
         float x = ofMap(bp[i].x,0,fullHD_x,0,ofGetWidth());
         float y = ofMap(bp[i].y,0,fullHD_y,0,ofGetHeight());
         
-        ofDrawBitmapString( "Ball ID = " + ofToString(i+1) , (i+1)*300, 20);
-        ofDrawBitmapString( "x = " + ofToString(x) , (i+1)*300, 40);
-        ofDrawBitmapString( "y = " + ofToString(y) , (i+1)*300, 60);
-        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (i+1)*300, 80);
-        ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1)*300, 100);
+        ofDrawBitmapString( "Ball ID = " + ofToString(i+1) , (i+1)*250, 20);
+        ofDrawBitmapString( "x = " + ofToString(x) , (i+1)*250, 40);
+        ofDrawBitmapString( "y = " + ofToString(y) , (i+1)*250, 60);
+        ofDrawBitmapString( "attack = " + ofToString(attack[i]) , (i+1)*250, 80);
+        ofDrawBitmapString( "note = " + ofToString(note[i]) , (i+1)*250, 100);
         
         //ball
         int j = 0;
